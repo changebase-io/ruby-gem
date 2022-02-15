@@ -2,25 +2,80 @@
 # installed gem
 $LOAD_PATH << File.expand_path('../lib', __FILE__)
 
-require 'simplecov'
-SimpleCov.start do
-  add_group 'lib', 'sunstone/lib'
-  add_group 'ext', 'sunstone/ext'
-end
+# require 'simplecov'
+# SimpleCov.start do
+#   add_group 'lib', 'sunstone/lib'
+#   add_group 'ext', 'sunstone/ext'
+# end
 
 require 'byebug'
 require "minitest/autorun"
 require 'minitest/unit'
 require 'minitest/reporters'
+require 'mocha/minitest'
 
-require 'active_record'
+require "rails"
+require "action_controller/railtie"
+require "active_record"
+require "action_controller"
+require "action_controller/base"
+
 require 'changebase'
-require 'changebase/railtie'
-# require File.expand_path('../schema_mock.rb', __FILE__)
+require 'changebase/action_controller'
+require 'changebase/active_record'
+
+Rails.env = 'test'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 $debugging = false
+
+class ActionDispatch::IntegrationTest
+  
+  def setup
+    @routes ||= self.class.app.routes
+  end
+  
+  def self.app
+    return @app if @app
+    
+    @app = Class.new(Rails::Application) do
+      config.eager_load = true
+      config.cache_classes = true
+      config.secret_key_base = 'test key base'
+
+      # config.logger = Logger.new($stdout)
+      # Rails.logger = config.logger
+    end
+    
+    route_namespace = self.name
+    route_routes = @routes
+    @app.routes.append do
+      scope module: route_namespace.underscore do
+        route_routes.each do |route|
+          case route
+          when Array
+            send(route[0], *route[1], &route[2])
+          else
+            instance_exec(&route)
+          end
+        end
+      end
+    end
+
+    app.initialize!
+  end
+  
+  def self.routes(&block)
+    @routes ||= []
+    @routes << block
+  end
+  
+  def self.get(*args, &block)
+    @routes ||= []
+    @routes << [:get, args, block]
+  end
+end
 
 # File 'lib/active_support/testing/declarative.rb', somewhere in rails....
 class ActiveSupport::TestCase
@@ -88,7 +143,7 @@ class ActiveSupport::TestCase
   end
 
   def assert_sql(expected, query)
-    assert_equal expected.strip.gsub(/"(\w+)"/, '\1').gsub(/[\s|\n]+/, ' '), query.to_sql.strip.gsub(/"(\w+)"/, '\1').gsub(/[\s|\n]+/, ' ')
+    assert_equal expected.strip.gsub(/"(\w+)"/, '\1').gsub(/[\s]+/, ' '), query.to_sql.strip.gsub(/"(\w+)"/, '\1').gsub(/[\s]+/, ' ')
   end
 
   def capture_sql
