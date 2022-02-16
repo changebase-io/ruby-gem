@@ -27,11 +27,11 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'faker'
   s.add_development_dependency 'factory_bot'
   s.add_development_dependency 'simplecov'
+  s.add_development_dependency 'pg'
   
   # Runtime
   s.add_runtime_dependency 'activerecord', '>= 6'
   s.add_runtime_dependency 'actionpack', '>= 6'
   s.add_runtime_dependency 'railties', '>= 6'
   
-  s.add_development_dependency 'pg'
 end

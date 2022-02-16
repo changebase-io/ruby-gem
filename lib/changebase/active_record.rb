@@ -75,7 +75,7 @@ module Changebase::ActiveRecord::PostgreSQLAdapter
   def commit_db_transaction
     if !@without_changebase && @changebase_metadata && !@changebase_metadata.empty?
       sql = ActiveRecord::Base.send(:replace_named_bind_variables, <<~SQL, {version: 1, metadata: ActiveSupport::JSON.encode(@changebase_metadata)})
-        INSERT INTO changebase_metadata ( version, data )
+        INSERT INTO #{quote_table_name(Changebase.metadata_table)} ( version, data )
         VALUES ( :version, :metadata )
         ON CONFLICT ( version )
         DO UPDATE SET version = :version, data = :metadata;

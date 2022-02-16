@@ -2,11 +2,8 @@
 # installed gem
 $LOAD_PATH << File.expand_path('../lib', __FILE__)
 
-# require 'simplecov'
-# SimpleCov.start do
-#   add_group 'lib', 'sunstone/lib'
-#   add_group 'ext', 'sunstone/ext'
-# end
+require 'simplecov'
+SimpleCov.start
 
 require 'byebug'
 require "minitest/autorun"
@@ -108,19 +105,14 @@ class ActiveSupport::TestCase
         encoding: "utf8"
       }
     
-
-      # db_config = ActiveRecord::DatabaseConfigurations::HashConfig.new('test', 'primary', ar_config)
-      # require "active_record/connection_adapters/#{db_config.adapter}_adapter"
-
       ActiveRecord::Base.establish_connection(ar_config)
       db_config = ActiveRecord::Base.connection_db_config
       db_tasks = ActiveRecord::Tasks::PostgreSQLDatabaseTasks.new(db_config)
-      # if !ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.database_exists?(ar_config)
-      #   db_tasks.create
-      # else
+      begin
         db_tasks.purge
-      # end
-      
+      rescue ActiveRecord::NoDatabaseError
+        db_tasks.create
+      end
       
       ActiveRecord::Migration.suppress_messages do
         ActiveRecord::Schema.define(&self.class.class_variable_get(:@@schema))
@@ -154,8 +146,9 @@ class ActiveSupport::TestCase
   
   def assert_query(*expected)
     queries_ran = SQLLogger.log.size
+
     yield
-  ensure
+
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
     
