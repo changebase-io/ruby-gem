@@ -1,0 +1,6 @@
+coverage
+*.gem
+.byebug_history
+Gemfile.lock
+log
+.DS_Store
