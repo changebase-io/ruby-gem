@@ -2,6 +2,26 @@ require 'test_helper'
 
 class ActionControllerTest < ActionDispatch::IntegrationTest
 
+  get "/justablock" => "justablock#world"
+  class JustablockController < ActionController::Base
+    changebase do
+      {request_id: request.uuid}
+    end
+    
+    def world
+      render plain: "Hello world!"
+    end
+  end
+
+  test "changebase with a block" do
+    uuid = SecureRandom.uuid
+    ActionDispatch::Request.any_instance.stubs(:uuid).returns(uuid)
+    ActiveRecord::Base.expects(:with_metadata).once.with({request_id: uuid})
+
+    get "/justablock"
+    assert_response :success
+  end
+
   get "/block" => "block#world"
   class BlockController < ActionController::Base
     changebase :request_id do

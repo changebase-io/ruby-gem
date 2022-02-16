@@ -6,7 +6,7 @@ applications written in the Ruby language.
 ## Installation
 
 ```sh
-gem install stripe
+gem install changebase
 ```
 
 If you are installing via bundler:
@@ -15,7 +15,9 @@ If you are installing via bundler:
 gem "changebase"
 ```
 
-## Rails / ActiveRecord Usage
+## Rails
+
+### ActiveRecord
 
 To include metadata when creating or modifying data with ActiveRecord:
 
@@ -25,29 +27,52 @@ To include metadata when creating or modifying data with ActiveRecord:
   end
 ```
 
+### ActionController
+
 In a controller you can use the following to log metadata with all updates during
 a request:
 
 ```ruby
   class ApplicationController < ActionController::Base
-    changebase :request_id, -> { request.uuid }
+    changebase do
+      {
+        request_id: request.uuid,
+        user: {
+          id: current_user.id
+        }
+      }
+    end
   end
 ```
 
 The `changebase` function can be called multiple times to include various data.
-To nest a value simply give it all the keys.
+To nest a value simply give it all the keys so it knows where to bury the value.
 
 Below are several diffent way of including metadata:
 
 ```ruby
   class ApplicationController < ActionController::Base
+    
+    # Just a block returning a hash of metadata.
+    changebase do
+        { my: data }
+    end
+    
+    # Sets `release` in the metadata to the string RELEASE_SHA
     changebase :release, RELEASE_SHA
+    
+    # Sets `request_id` in the metadata to the value returned from the `Proc`
     changebase :request_id, -> { request.uuid }
+    
+    # Sets `user.id` in the metadata to the value returned from the
+    # `current_user_id` function
     changebase :user, :id, :current_user_id
+    
+    # Sets `user.name` in the metadata to the value returned from the block
     changebase :user, :name do
       current_user.name
     end
-
+    
     def current_user_id
       current_user.id
     end

@@ -34,6 +34,7 @@ module Changebase::ActionController
     
   def changebase_metadata_wrapper(&block)
     metadata = {}
+    
     changebase_metadata.each do |keys, value|
       data = metadata
       keys[0...-1].each do |key|
@@ -41,13 +42,19 @@ module Changebase::ActionController
         data = data[key]
       end
       
-      data[keys.last] ||= case value
+      value = case value
       when Symbol
         self.send(value)
       when Proc
         instance_exec(&value)
       else
         value
+      end
+      
+      if keys.last
+        data[keys.last] ||= value
+      else
+        data.merge!(value)
       end
     end
 
