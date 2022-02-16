@@ -111,5 +111,5 @@ Changebase.metadata_table = "my_very_cool_custom_metadata_table"
 
 ## Bugs
 
-If you think you found a bug, please file a ticket on the {issue 
-tracker}[https://github.com/changebase-io/ruby-gem/issues].
+If you think you found a bug, please file a ticket on the [issue 
+tracker](https://github.com/changebase-io/ruby-gem/issues).
