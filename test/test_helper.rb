@@ -106,7 +106,7 @@ class ActiveSupport::TestCase
       }
     
       ActiveRecord::Base.establish_connection(ar_config)
-      db_config = if ActiveRecord.version < Gem::Version.new('7')
+      db_config = if ActiveRecord.version < Gem::Version.new('6.1')
         ActiveRecord::Base.connection_config.stringify_keys
       else
         ActiveRecord::Base.connection_db_config

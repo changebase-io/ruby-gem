@@ -44,8 +44,8 @@ jobs:
           echo 'source "https://rubygems.org"' > Gemfile
           echo 'gem "rails", "${{ matrix.rails }}"' >> Gemfile
           echo 'gemspec' >> Gemfile
+          bundle install
           
       - name: Run tests
         run: |
-          bundle install
           bundle exec rake test
