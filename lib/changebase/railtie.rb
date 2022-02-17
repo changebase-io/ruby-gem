@@ -1,11 +1,16 @@
-class Changebase::Railtie < Rails::Railtie
+class Changebase::Engine < ::Rails::Engine
 
   config.changebase = ActiveSupport::OrderedOptions.new
   config.changebase.metadata_table = "changebase_metadata"
   
-  initializer 'changebase.initialize' do |app|
+  initializer :changebase do |app|
+    migration_paths = config.paths['db/migrate'].expanded
+    
     ActiveSupport.on_load(:active_record) do
       require 'changebase/active_record'
+      migration_paths.each do |path|
+        ActiveRecord::Tasks::DatabaseTasks.migrations_paths << path
+      end
     end
     
     ActiveSupport.on_load(:action_controller) do

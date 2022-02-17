@@ -17,15 +17,10 @@ gem "changebase"
 
 ## Rails
 
-### ActiveRecord
+Once you install the Gem run your migration to autmatically create the metadata
+table for your database by runing:
 
-To include metadata when creating or modifying data with ActiveRecord:
-
-```ruby
-  ActiveRecord::Base.with_metadata({user: {name: 'Tom'}}) do
-    @post.update(title: "A new beging")
-  end
-```
+`rails db:migrate`
 
 ### ActionController
 
@@ -90,6 +85,16 @@ In the above example the following would be logged with all database changes:
     name:      'Tom'
   }
 }
+```
+
+### ActiveRecord
+
+To include metadata when creating or modifying data with ActiveRecord:
+
+```ruby
+  ActiveRecord::Base.with_metadata({user: {name: 'Tom'}}) do
+    @post.update(title: "A new beging")
+  end
 ```
 
 ### Configuration

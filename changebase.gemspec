@@ -1,37 +1,43 @@
 require_relative "lib/changebase/version"
 
-Gem::Specification.new do |s|
-  s.name        = "changebase"
-  s.version     = Changebase::VERSION
-  s.authors     = ["Jon Bracy", "James Bracy"]
-  s.email       = ["jonbracy@gmail.com", "waratuman@gmail.com"]
-  s.homepage    = "https://changebase.io"
-  s.summary     = %q{Changebase.io Client}
-  s.description = %q{Ruby library for integrating with Changebase.io}
-
-  s.files         = Dir["LICENSE", "README.md", "lib/**/*"]
-  s.require_paths = ["lib"]
-  s.test_files    = []
-  s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
+Gem::Specification.new do |spec|
+  spec.name        = "changebase"
+  spec.authors     = ["Jon Bracy", "James Bracy"]
+  spec.email       = ["jon@changebase.io", "james@changebase.io"]
+  spec.summary     = %q{Changebase.io Client}
+  spec.description = %q{Ruby library for integrating with Changebase.io}
+  spec.homepage    = "https://changebase.io"
   
-  s.extra_rdoc_files = %w(README.rdoc)
-  s.rdoc_options.concat ['--main', 'README.rdoc']
+  spec.metadata["homepage_uri"]       = spec.homepage
+  spec.metadata["source_code_uri"]    = "https://github.com/changebase-io/ruby-gem"
+  spec.metadata["bug_tracker_uri"]    = "https://github.com/changebase-io/ruby-gem/issues"
+  # spec.metadata["changelog_uri"]      = "#{spec.homepage}/blob/master/CHANGELOG.md"
+  # spec.metadata["documentation_uri"]  = "#{spec.homepage}/blob/master/CHANGELOG.md"
 
-  # Developoment 
-  s.add_development_dependency 'rake'
-  s.add_development_dependency 'byebug'
-  s.add_development_dependency 'bundler'
-  s.add_development_dependency 'minitest'
-  s.add_development_dependency 'minitest-reporters'
-  s.add_development_dependency 'mocha'
-  s.add_development_dependency 'faker'
-  s.add_development_dependency 'factory_bot'
-  s.add_development_dependency 'simplecov'
-  s.add_development_dependency 'pg'
+  spec.version     = Changebase::VERSION
+  spec.platform    = Gem::Platform::RUBY
+  spec.required_ruby_version = '>= 2.7'
+  
+  spec.files         = Dir["README.md", "lib/**/*", "db/**/*"]
+  spec.require_paths = ["lib"]
+  
+  spec.extra_rdoc_files = %w(README.md)
+  spec.rdoc_options.concat ['--main', 'README.md']
   
   # Runtime
-  s.add_runtime_dependency 'activerecord', '>= 6'
-  s.add_runtime_dependency 'actionpack', '>= 6'
-  s.add_runtime_dependency 'railties', '>= 6'
-  
+  spec.add_runtime_dependency 'activerecord',  '>= 6'
+  spec.add_runtime_dependency 'actionpack',    '>= 6'
+  spec.add_runtime_dependency 'railties',      '>= 6'
+
+  # Developoment 
+  spec.add_development_dependency 'rake'
+  spec.add_development_dependency 'byebug'
+  spec.add_development_dependency 'bundler'
+  spec.add_development_dependency 'minitest'
+  spec.add_development_dependency 'minitest-reporters'
+  spec.add_development_dependency 'mocha'
+  spec.add_development_dependency 'faker'
+  spec.add_development_dependency 'factory_bot'
+  spec.add_development_dependency 'simplecov'
+  spec.add_development_dependency 'pg'
 end
