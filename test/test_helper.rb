@@ -106,10 +106,10 @@ class ActiveSupport::TestCase
       }
     
       ActiveRecord::Base.establish_connection(ar_config)
-      db_config = if ActiveRecord.version < Gem::Version.new('6.1')
-        ActiveRecord::Base.connection_config.stringify_keys
-      else
+      db_config = if ActiveRecord::Base.respond_to?(:connection_db_config)
         ActiveRecord::Base.connection_db_config
+      else
+        ActiveRecord::Base.connection_config.stringify_keys
       end
       
       db_tasks = ActiveRecord::Tasks::PostgreSQLDatabaseTasks.new(db_config)
