@@ -25,6 +25,11 @@ end
 
 module Changebase::ActiveRecord::PostgreSQLAdapter
 
+  def initialize(*args, **margs)
+    @without_changebase = false
+    super
+  end
+  
   def without_changebase
     @without_changebase = true
     yield
