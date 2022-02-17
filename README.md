@@ -17,6 +17,11 @@ gem "changebase"
 
 ## Rails
 
+Once you install the Gem run your migration to autmatically create the metadata
+table for your database by runing:
+
+`rails db:migrate`
+
 ### ActiveRecord
 
 To include metadata when creating or modifying data with ActiveRecord:
