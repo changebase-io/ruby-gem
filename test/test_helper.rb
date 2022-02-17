@@ -34,7 +34,7 @@ class ActionDispatch::IntegrationTest
   end
   
   def self.app
-    return @app if @app
+    return @app if instance_variable_defined?(:@app)
     
     @app = Class.new(Rails::Application) do
       config.eager_load = true
@@ -106,7 +106,12 @@ class ActiveSupport::TestCase
       }
     
       ActiveRecord::Base.establish_connection(ar_config)
-      db_config = ActiveRecord::Base.connection_db_config
+      db_config = if ActiveRecord.version < Gem::Version.new('6.1')
+        ActiveRecord::Base.connection_config.stringify_keys
+      else
+        ActiveRecord::Base.connection_db_config
+      end
+      
       db_tasks = ActiveRecord::Tasks::PostgreSQLDatabaseTasks.new(db_config)
       begin
         db_tasks.purge

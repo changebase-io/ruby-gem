@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  sunstone:
+    name: Changebase Ruby Gem Test
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['2.7', '3.0', '3.1']
+        rails:
+          - '~> 6.0.0'
+          - '~> 6.1.0'
+          - '~> 7.0.0'
+        
+    steps:
+      - name: Install Postgresql
+        run: |
+          sudo apt-get install curl ca-certificates gnupg
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg >/dev/null
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install postgresql-14
+          sudo systemctl start postgresql@14-main.service
+          pg_isready
+          sudo -u postgres createuser runner --superuser
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          
+      - uses: actions/checkout@v2
+
+      - name: Setup Gemfile
+        run: |
+          rm Gemfile
+          echo 'source "https://rubygems.org"' > Gemfile
+          echo 'gem "rails", "${{ matrix.rails }}"' >> Gemfile
+          echo 'gemspec' >> Gemfile
+          bundle install
+          
+      - name: Run tests
+        run: |
+          bundle exec rake test
