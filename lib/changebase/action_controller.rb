@@ -20,10 +20,16 @@ module Changebase::ActionController
     end
     
     def changebase_metadata
-      if self.superclass.respond_to?(:changebase_metadata)
-        (@changebase_metadata || []) + self.superclass.changebase_metadata
+      klass_metadata = if instance_variable_defined?(:@changebase_metadata)
+        @changebase_metadata
       else
-        @changebase_metadata || []
+        []
+      end
+      
+      if self.superclass.respond_to?(:changebase_metadata)
+        klass_metadata + self.superclass.changebase_metadata
+      else
+        klass_metadata
       end
     end
   end
