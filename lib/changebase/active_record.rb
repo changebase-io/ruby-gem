@@ -27,6 +27,7 @@ module Changebase::ActiveRecord::PostgreSQLAdapter
 
   def initialize(*args, **margs)
     @without_changebase = false
+    @changebase_metadata = nil
     super
   end
   

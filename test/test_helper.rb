@@ -34,7 +34,7 @@ class ActionDispatch::IntegrationTest
   end
   
   def self.app
-    return @app if @app
+    return @app if instance_variable_defined?(:@app)
     
     @app = Class.new(Rails::Application) do
       config.eager_load = true
