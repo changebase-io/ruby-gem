@@ -22,16 +22,6 @@ table for your database by runing:
 
 `rails db:migrate`
 
-### ActiveRecord
-
-To include metadata when creating or modifying data with ActiveRecord:
-
-```ruby
-  ActiveRecord::Base.with_metadata({user: {name: 'Tom'}}) do
-    @post.update(title: "A new beging")
-  end
-```
-
 ### ActionController
 
 In a controller you can use the following to log metadata with all updates during
@@ -95,6 +85,16 @@ In the above example the following would be logged with all database changes:
     name:      'Tom'
   }
 }
+```
+
+### ActiveRecord
+
+To include metadata when creating or modifying data with ActiveRecord:
+
+```ruby
+  ActiveRecord::Base.with_metadata({user: {name: 'Tom'}}) do
+    @post.update(title: "A new beging")
+  end
 ```
 
 ### Configuration
