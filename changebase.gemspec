@@ -30,8 +30,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'pg'
   
   # Runtime
-  s.add_runtime_dependency 'activerecord', '>= 6'
-  s.add_runtime_dependency 'actionpack', '>= 6'
-  s.add_runtime_dependency 'railties', '>= 6'
+  s.add_runtime_dependency 'activerecord', '>= 5'
+  s.add_runtime_dependency 'actionpack', '>= 5'
+  s.add_runtime_dependency 'railties', '>= 5'
   
 end
