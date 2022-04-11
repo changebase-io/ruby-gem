@@ -99,8 +99,15 @@ To include metadata when creating or modifying data with ActiveRecord:
 
 ### Configuration
 
-To configure the metadata table that Changebase writes to create a initializer
-at `config/initializers/changebase.rb` with the following:
+#### Replication Mode
+
+The default model for the `changebase` gem is `replication`. In this mode
+Changebase is setup to replicate your database and record events via the
+replication stream.
+
+By default without any configuration `changebase` will write metadata to the
+`"changebase_metadata"`. To configure the metadata table that Changebase writes
+to create a initializer at `config/initializers/changebase.rb` with the following:
 
 ```ruby
 Rails.application.config.tap do |config|
@@ -112,6 +119,32 @@ If you are not using Rails you can configure Changebase directly via:
 
 ```ruby
 Changebase.metadata_table = "my_very_cool_custom_metadata_table"
+```
+
+#### API/Sync Mode
+
+In the event you cannot setup your database to replicate to changebase you can
+use the synchronous API mode. Events will be sent to Changebase over our HTTP API.
+This mode will enable you collect roughly the same information but has the
+potentional to miss events and changes in your database if you are not careful.
+
+To configure Changebase in the `"api/sync"` mode create a initializer at
+`config/initializers/changebase.rb` with the following:
+
+```ruby
+Rails.application.config.tap do |config|
+  config.changebase.mode = "api/sync"
+  config.changebase.connection = "https://API_KEY@chanbase.io"
+end
+```
+
+If you are not using Rails you can configure Changebase directly via:
+
+```ruby
+Changebase.configure do |config|
+  config.changebase.mode = "api/sync"
+  config.changebase.connection = "https://API_KEY@chanbase.io"
+end
 ```
 
 ## Bugs
