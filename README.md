@@ -101,13 +101,13 @@ To include metadata when creating or modifying data with ActiveRecord:
 
 #### Replication Mode
 
-The default model for the `changebase` gem is `replication`. In this mode
+The default mode for the `changebase` gem is `replication`. In this mode
 Changebase is setup to replicate your database and record events via the
 replication stream.
 
-By default without any configuration `changebase` will write metadata to the
-`"changebase_metadata"`. To configure the metadata table that Changebase writes
-to create a initializer at `config/initializers/changebase.rb` with the following:
+The default configuration `changebase` will write metadata to the
+`"changebase_metadata"` table. To configure the metadata table create an
+initializer at `config/initializers/changebase.rb` with the following:
 
 ```ruby
 Rails.application.config.tap do |config|
@@ -119,14 +119,18 @@ If you are not using Rails you can configure Changebase directly via:
 
 ```ruby
 Changebase.metadata_table = "my_very_cool_custom_metadata_table"
+
+# Or
+
+Changebase.configure(metadata_table: "my_very_cool_custom_metadata_table")
 ```
 
 #### API/Sync Mode
 
-In the event you cannot setup your database to replicate to changebase you can
-use the synchronous API mode. Events will be sent to Changebase over our HTTP API.
-This mode will enable you collect roughly the same information but has the
-potentional to miss events and changes in your database if you are not careful.
+If you are unable to setup database replication you can use the synchronous API
+mode. Events will be sent to through the Changebase API. You will collect roughly
+the same information, but potentionally to miss events and changes in your database
+if you are not careful, or if another application accesses the database directly.
 
 To configure Changebase in the `"api/sync"` mode create a initializer at
 `config/initializers/changebase.rb` with the following:
@@ -134,7 +138,7 @@ To configure Changebase in the `"api/sync"` mode create a initializer at
 ```ruby
 Rails.application.config.tap do |config|
   config.changebase.mode = "api/sync"
-  config.changebase.connection = "https://API_KEY@chanbase.io"
+  config.changebase.connection = "https://#{ ENV.fetch('CHANGEBASE_API_KEY') }@changebase.io"
 end
 ```
 
@@ -143,8 +147,15 @@ If you are not using Rails you can configure Changebase directly via:
 ```ruby
 Changebase.configure do |config|
   config.changebase.mode = "api/sync"
-  config.changebase.connection = "https://API_KEY@chanbase.io"
+  config.changebase.connection = "https://#{ ENV.fetch('CHANGEBASE_API_KEY') }@changebase.io"
 end
+
+# Or
+
+Changebase.configure(
+    mode: "api/sync",
+    connection: "https://API_KEY@chanbase.io"
+)
 ```
 
 ## Bugs

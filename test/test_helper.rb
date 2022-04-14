@@ -19,7 +19,7 @@ require "action_controller/base"
 
 require 'changebase'
 require 'changebase/action_controller'
-require 'changebase/active_record'
+require 'changebase/replication'
 
 Rails.env = 'test'
 
