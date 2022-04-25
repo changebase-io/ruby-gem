@@ -2,14 +2,20 @@
 # installed gem
 $LOAD_PATH << File.expand_path('../lib', __FILE__)
 
-require 'simplecov'
-SimpleCov.start
+# require 'simplecov'
+# SimpleCov.start
+
+# gem "rails", ENV["RAILS_VERSION"]
+%w(railties actionpack activerecord).each do |g|
+  gem g, ENV["RAILS_VERSION"]
+end
 
 require 'byebug'
 require "minitest/autorun"
 require 'minitest/unit'
 require 'minitest/reporters'
 require 'mocha/minitest'
+require 'webmock/minitest'
 
 require "rails"
 require "action_controller/railtie"
@@ -19,11 +25,20 @@ require "action_controller/base"
 
 require 'changebase'
 require 'changebase/action_controller'
-require 'changebase/replication'
+require "changebase/#{ENV["CB_ADAPTER"]}"
 
 Rails.env = 'test'
 
+WebMock.disable_net_connect!
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+
+case ENV["CB_ADAPTER"]
+when 'inline'
+  Changebase.configure(
+    url: 'http://APIKEY@changebase.io',
+    logger: Logger.new("/dev/null")
+  )
+end
 
 $debugging = false
 
@@ -79,7 +94,10 @@ class ActiveSupport::TestCase
   # include WebMock::API
   
   # File 'lib/active_support/testing/declarative.rb'
-  def self.test(name, &block)
+  def self.test(name, only: [], &block)
+    if Array(only).include?(ENV["CB_ADAPTER"].to_sym)
+      puts '!!!'
+    end
     test_name = "test_#{name.gsub(/\s+/, '_')}".to_sym
     defined = method_defined? test_name
     raise "#{test_name} is already defined in #{self}" if defined
@@ -156,7 +174,7 @@ class ActiveSupport::TestCase
 
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
-    
+    puts queries_ran.map(&:inspect)
     expected.each do |pattern|
       failed_patterns << pattern unless queries_ran.any?{ |sql| pattern === sql }
     end

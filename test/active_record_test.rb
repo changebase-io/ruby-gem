@@ -16,9 +16,7 @@ class ActiveRecordTest < ActiveSupport::TestCase
   class Post < ActiveRecord::Base
   end
   
-
-  
-  test 'a custom metadata table' do
+  test 'a custom metadata table', only: :replication do
     Changebase.metadata_table = 'x'
 
     expected_query = <<~MSG

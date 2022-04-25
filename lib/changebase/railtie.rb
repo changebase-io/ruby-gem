@@ -10,11 +10,12 @@ class Changebase::Engine < ::Rails::Engine
     ActiveSupport.on_load(:active_record) do
       case Changebase.mode
       when 'replication'
-        require 'changebase/replication'
+        Changebase::Replication.load! if !Changebase::Replication.loaded?
         migration_paths.each do |path|
           ActiveRecord::Tasks::DatabaseTasks.migrations_paths << path
         end
-      when 'api/sync'
+      when 'inline'
+        Changebase::Inline.load! if !Changebase::Inline.loaded?
       end
     end
     

@@ -125,19 +125,19 @@ Changebase.metadata_table = "my_very_cool_custom_metadata_table"
 Changebase.configure(metadata_table: "my_very_cool_custom_metadata_table")
 ```
 
-#### API/Sync Mode
+#### Inline Mode
 
-If you are unable to setup database replication you can use the synchronous API
-mode. Events will be sent to through the Changebase API. You will collect roughly
-the same information, but potentionally to miss events and changes in your database
+If you are unable to setup database replication you can use inline mode. Events
+will be sent to through the Changebase API. You will collect roughly the same
+information, but potentionally to miss events and changes in your database
 if you are not careful, or if another application accesses the database directly.
 
-To configure Changebase in the `"api/sync"` mode create a initializer at
+To configure Changebase in the `"inline"` mode create a initializer at
 `config/initializers/changebase.rb` with the following:
 
 ```ruby
 Rails.application.config.tap do |config|
-  config.changebase.mode = "api/sync"
+  config.changebase.mode = "inline"
   config.changebase.connection = "https://#{ ENV.fetch('CHANGEBASE_API_KEY') }@changebase.io"
 end
 ```
@@ -146,14 +146,14 @@ If you are not using Rails you can configure Changebase directly via:
 
 ```ruby
 Changebase.configure do |config|
-  config.changebase.mode = "api/sync"
+  config.changebase.mode = "inline"
   config.changebase.connection = "https://#{ ENV.fetch('CHANGEBASE_API_KEY') }@changebase.io"
 end
 
 # Or
 
 Changebase.configure(
-    mode: "api/sync",
+    mode: "inline",
     connection: "https://API_KEY@chanbase.io"
 )
 ```
