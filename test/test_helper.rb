@@ -30,12 +30,17 @@ require "changebase/#{ENV["CB_ADAPTER"]}"
 Rails.env = 'test'
 
 WebMock.disable_net_connect!
+WebMock::StubRegistry.instance.global_stubs[:after_local_stubs].push(
+  WebMock::RequestStub.new(:get, /changebase.io/).to_return(status: 200)
+)
+
+
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 case ENV["CB_ADAPTER"]
 when 'inline'
   Changebase.configure(
-    url: 'http://APIKEY@changebase.io',
+    connection: 'https://APIKEY@changebase.io',
     logger: Logger.new("/dev/null")
   )
 end
@@ -168,9 +173,9 @@ class ActiveSupport::TestCase
   end
   
   def assert_query(*expected)
-    queries_ran = SQLLogger.log.size
+    queries_ran = block_given? ? SQLLogger.log.size : 0
 
-    yield
+    yield if block_given?
 
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
@@ -221,6 +226,10 @@ class ActiveSupport::TestCase
     x
   end
 
+  def assert_posted(path, body, **nargs, &block)
+    nargs[:body] = body.is_a?(String) ? body : JSON.dump(body)
+    assert_requested(:post, "http://APIKEY@changebase.io#{path.delete_prefix('/')}", **nargs, &block)
+  end
 
   class SQLLogger
     class << self
@@ -260,7 +269,7 @@ class ActiveSupport::TestCase
       self.class.log_all << sql
       unless ignore =~ sql
         if $debugging
-        puts caller.select { |l| l.start_with?(File.expand_path('../../lib', __FILE__)) }
+        puts caller#.select { |l| l.start_with?(File.expand_path('../../lib', __FILE__)) }
         puts "\n\n" 
         end
       end

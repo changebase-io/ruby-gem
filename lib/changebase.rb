@@ -46,6 +46,10 @@ module Changebase
       true
     end
   end
+  
+  def self.logger
+    @logger ||= Logger.new(STDOUT)
+  end
 end
 
 require 'changebase/railtie' if defined?(Rails)
@@ -158,5 +162,30 @@ class Changebase::Event
   # def to_signed_global_id(options={})
   #    SignedGlobalID.create(self, { app: :changebase }.merge(options))
   # end
+
+end
+
+class Changebase::Action
+
+  attr_accessor :id, :event_id, :type, :timestamp, :subject_type, :subject_id, :diff
+
+  def initialize(attrs)
+    attrs.each do |k,v|
+      self.send("#{k}=", v)
+    end
+    self.diff ||= {}
+  end
+  
+  def as_json
+    {
+      diff:         diff.as_json,
+      subject_type: subject_type,
+      subject_id:   subject_id,
+      timestamp:    timestamp.iso8601(3),
+      type:         type,
+      event_id:     event_id,
+      id:           id
+    }.select { |k, v| !v.nil? }
+  end
 
 end

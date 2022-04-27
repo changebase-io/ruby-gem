@@ -14,20 +14,20 @@ module Changebase::Inline
         other.before_destroy    { activehistory_track(:destroy) }
       end
     
-      def inherited(subclass)
-        super
-        subclass.instance_variable_set('@activehistory', @activehistory.clone) if defined?(@activehistory)
-      end
-    
-      def track(track_model = true, exclude: [], habtm_model: nil)
-        if track_model == false
-          @activehistory = nil
-        else
-          options = { exclude: Array(exclude) }
-          options[:habtm_model] = habtm_model if habtm_model
-          @activehistory = options
-        end
-      end
+      # def inherited(subclass)
+      #   super
+      #   subclass.instance_variable_set('@activehistory', @activehistory.clone) if defined?(@activehistory)
+      # end
+      #
+      # def track(track_model = true, exclude: [], habtm_model: nil)
+      #   if track_model == false
+      #     @activehistory = nil
+      #   else
+      #     options = { exclude: Array(exclude) }
+      #     options[:habtm_model] = habtm_model if habtm_model
+      #     @activehistory = options
+      #   end
+      # end
     
       def has_and_belongs_to_many(name, scope = nil, **options, &extension)
         super
@@ -161,8 +161,9 @@ module Changebase::Inline
     end
 
     def activehistory_tracking
-      if Changebase.configured? && self.class.instance_variable_defined?(:@activehistory)
-        self.class.instance_variable_get(:@activehistory)
+      if Changebase.configured?# && self.class.instance_variable_defined?(:@activehistory)
+        # self.class.instance_variable_get(:@activehistory)
+        {exclude: []}
       end
     end
   

@@ -37,17 +37,21 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
   end
 
   test 'Base::with_metadata DATA' do
-    expected_query = <<~MSG
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    MSG
-
-    assert_query(expected_query) do
-      ActiveRecord::Base.with_metadata({user: 'tom'}) do
-        @post.destroy
-      end
+    debug do
+    ActiveRecord::Base.with_metadata({user: 'tom'}) do
+      @post.destroy
+    end
+  end
+    case Changebase.mode
+    when 'inline'
+      assert_posted('', {})
+    when 'replication'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
     end
   end
   
@@ -68,18 +72,18 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
   end
 
   test 'Model::with_metadata DATA' do
-    expected_query = <<~MSG
+    Post.with_metadata({user: 'tom'}) do
+      @post.destroy
+    end
+
+    assert_posted('', {}, mode: :inline)
+
+    assert_query(<<~MSG, mode: :replication)
       INSERT INTO "changebase_metadata" ( version, data )
       VALUES ( 1, '{"user":"tom"}' )
       ON CONFLICT ( version )
       DO UPDATE SET version = 1, data = '{"user":"tom"}';
     MSG
-
-    assert_query(expected_query) do
-      Post.with_metadata({user: 'tom'}) do
-        @post.destroy
-      end
-    end
   end
   
 end

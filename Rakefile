@@ -29,7 +29,7 @@ namespace :test do
       ADAPTERS.each do |adapter|
         Rake::TestTask.new(adapter => ["test:#{version}", "test:#{adapter}"]) do |t|
           t.libs << 'lib' << 'test'
-          t.test_files = FileList['test/**/*_test.rb']
+          t.test_files = FileList[(File.file?(ARGV.last) || ARGV.index('*')) ? ARGV.last : 'test/**/*_test.rb']
           t.warning = true
           t.verbose = false
         end
