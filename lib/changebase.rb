@@ -1,5 +1,7 @@
 module Changebase
 
+  autoload :VERSION, 'changebase/version'
+  autoload :Connection, 'changebase/connection'
   autoload :Inline, 'changebase/inline'
   autoload :Replication, 'changebase/replication'
   autoload :ActiveRecord, 'changebase/active_record'
@@ -31,7 +33,9 @@ module Changebase
   end
 
   def self.connection
-    @config[:connection]
+    Thread.current[:changebase_connection] ||= Changebase::Connection.new({
+      url: @config[:connection]
+    })
   end
 
   def self.configure(**config)
