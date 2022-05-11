@@ -86,21 +86,21 @@ module Changebase
       event
     end
 
-    def event_for(type, id, new_options=nil)
-      type = type.base_class.model_name.name if !type.is_a?(String)
-      event = @events.find { |a| a.subject_type.to_s == type.to_s && a.subject_id.to_s == id.to_s }
+    def event_for(table_name, id, new_options=nil)
+      # type = type.base_class.model_name.name if !type.is_a?(String)
+      # event = @events.find { |a| a.subject_type.to_s == type.to_s && a.subject_id.to_s == id.to_s }
 
-      if new_options
-        if event
-          event.diff.merge!(new_options[:diff]) if new_options.has_key?(:diff)
-          event
-        else
+      # if new_options
+      #   if event
+      #     event.diff.merge!(new_options[:diff]) if new_options.has_key?(:diff)
+      #     event
+      #   else
           event!({ subject_type: type, subject_id: id, type: :update }.merge(new_options))
-        end
+      #   end
 
-      else
-        event
-      end
+      # else
+      #   event
+      # end
     end
 
     def self.create!(attrs={})
