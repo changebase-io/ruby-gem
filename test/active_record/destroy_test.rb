@@ -90,7 +90,7 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
               ]
             }
           ]
-        })
+        }})
     when 'replication'
       assert_query(<<~MSG)
         INSERT INTO "changebase_metadata" ( version, data )
