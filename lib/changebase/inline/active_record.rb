@@ -241,7 +241,12 @@ module Changebase
           Thread.current[:activehistory_save_lock] = true
           if !Thread.current[:activehistory_transaction]
             destroy_current_transaction = true
-            Thread.current[:activehistory_transaction] = Changebase::Transaction.new(timestamp: @activehistory_timestamp)
+            # TODO: Move the metadata from the connection to a thread variable
+            metadata = self.class.connection.instance_variable_get(:@changebase_metadata)
+            Thread.current[:activehistory_transaction] =
+              Changebase::Transaction.new(
+                timestamp: @activehistory_timestamp,
+                metadata: metadata)
           end
         end
 
@@ -610,7 +615,12 @@ module Changebase
               Thread.current[:activehistory_save_lock] = true
               if Thread.current[:activehistory_transaction].nil?
                 destroy_current_transaction = true
-                Thread.current[:activehistory_transaction] = Changebase::Transaction.new(timestamp: @activehistory_timestamp)
+                # TODO: Move the metadata from the connection to a thread variable
+                metadata = self.class.connection.instance_variable_get(:@changebase_metadata)
+                Thread.current[:activehistory_transaction] =
+                  Changebase::Transaction.new(
+                    timestamp: @activehistory_timestamp,
+                    metadata: metadata)
               end
             end
 
