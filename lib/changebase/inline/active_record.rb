@@ -69,7 +69,7 @@ module Changebase
 
     def _create
       events.delete_if { |a| a.columns.empty? }
-      payload = JSON.generate(self.as_json)
+      payload = JSON.generate({transaction: self.as_json})
       Changebase.logger.debug("[Changebase] POST /transactions WITH #{payload}")
       Changebase.connection.post('/transactions', payload)
       @events = []

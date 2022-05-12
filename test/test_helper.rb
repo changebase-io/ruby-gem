@@ -226,10 +226,36 @@ class ActiveSupport::TestCase
     x
   end
 
+  def reduce_to(a, b)
+    a = a.keep_if do |k, v|
+      b.keys.map(&:to_s).include?(k.to_s)
+    end
+    
+    a.each do |k, v|
+      other_v = (b[k.to_sym] || b[k.to_s])
+      if v.is_a?(Hash) && other_v.is_a?(Hash)
+        reduce_to(v, other_v)
+      elsif v.is_a?(Array) && other_v.is_a?(Array)
+        v.each_with_index do |o, i|
+          reduce_to(o, other_v[i]) if o && other_v[i]
+        end
+      end
+    end
+    
+    a
+  end
+  
+  # Assert A contains B, A may have other keys
+  def assert_contains(a, b, prefix=nil, top: nil)
+    assert_nil(a) if b.nil?
+    flunk("Fail, nil will never contain #{prefix}#{b.inspect}") if a.nil?
+
+    assert_equal(reduce_to(a, b), b)
+  end
+  
   def assert_posted(path, body, **nargs)
     assert_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs) do |req|
-      byebug
-      (body.to_a - JSON(req.body).to_a).empty?
+      assert_contains(JSON.parse(req.body), body)
     end
   end
 
