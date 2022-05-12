@@ -31,7 +31,7 @@ Rails.env = 'test'
 
 WebMock.disable_net_connect!
 WebMock::StubRegistry.instance.global_stubs[:after_local_stubs].push(
-  WebMock::RequestStub.new(:get, /changebase.io/).to_return(status: 200)
+  WebMock::RequestStub.new(:any, /changebase.io/).to_return(status: 200)
 )
 
 
@@ -48,14 +48,14 @@ end
 $debugging = false
 
 class ActionDispatch::IntegrationTest
-  
+
   def setup
     @routes ||= self.class.app.routes
   end
-  
+
   def self.app
     return @app if instance_variable_defined?(:@app)
-    
+
     @app = Class.new(Rails::Application) do
       config.eager_load = true
       config.cache_classes = true
@@ -64,7 +64,7 @@ class ActionDispatch::IntegrationTest
       # config.logger = Logger.new($stdout)
       # Rails.logger = config.logger
     end
-    
+
     route_namespace = self.name
     route_routes = @routes
     @app.routes.append do
@@ -82,12 +82,12 @@ class ActionDispatch::IntegrationTest
 
     app.initialize!
   end
-  
+
   def self.routes(&block)
     @routes ||= []
     @routes << block
   end
-  
+
   def self.get(*args, &block)
     @routes ||= []
     @routes << [:get, args, block]
@@ -97,7 +97,7 @@ end
 # File 'lib/active_support/testing/declarative.rb', somewhere in rails....
 class ActiveSupport::TestCase
   # include WebMock::API
-  
+
   # File 'lib/active_support/testing/declarative.rb'
   def self.test(name, only: [], &block)
     if Array(only).include?(ENV["CB_ADAPTER"].to_sym)
@@ -114,12 +114,12 @@ class ActiveSupport::TestCase
       end
     end
   end
-  
+
   # AR Setup
   def self.schema(&block)
     self.class_variable_set(:@@schema, block)
   end
-  
+
   set_callback(:setup, :before) do
     if !self.class.class_variable_defined?(:@@suite_setup_run) && self.class.class_variable_defined?(:@@schema)
       ar_config = {
@@ -127,21 +127,21 @@ class ActiveSupport::TestCase
         database: "changebase-ruby-gem-test",
         encoding: "utf8"
       }
-    
+
       ActiveRecord::Base.establish_connection(ar_config)
       db_config = if ActiveRecord::Base.respond_to?(:connection_db_config)
         ActiveRecord::Base.connection_db_config
       else
         ActiveRecord::Base.connection_config.stringify_keys
       end
-      
+
       db_tasks = ActiveRecord::Tasks::PostgreSQLDatabaseTasks.new(db_config)
       begin
         db_tasks.purge
       rescue ActiveRecord::NoDatabaseError
         db_tasks.create
       end
-      
+
       ActiveRecord::Migration.suppress_messages do
         ActiveRecord::Schema.define(&self.class.class_variable_get(:@@schema))
         ActiveRecord::Migration.execute("SELECT c.relname FROM pg_class c WHERE c.relkind = 'S'").each_row do |row|
@@ -149,10 +149,10 @@ class ActiveSupport::TestCase
         end
       end
     end
-    
+
     self.class.class_variable_set(:@@suite_setup_run, true)
   end
-  
+
   def debug
     ActiveRecord::Base.logger = Logger.new(STDOUT)
     $debugging = true
@@ -171,7 +171,7 @@ class ActiveSupport::TestCase
     yield
     SQLLogger.log[queries_ran...]
   end
-  
+
   def assert_query(*expected)
     queries_ran = block_given? ? SQLLogger.log.size : 0
 
@@ -187,7 +187,7 @@ class ActiveSupport::TestCase
     assert failed_patterns.empty?, <<~MSG
       Query pattern(s) not found:
         - #{failed_patterns.map(&:inspect).join('\n  - ')}
-      
+
       Queries Ran (queries_ran.size):
         - #{queries_ran.map{|l| l.gsub(/\n\s*/, "\n    ")}.join("\n  - ")}
     MSG
@@ -199,7 +199,7 @@ class ActiveSupport::TestCase
   ensure
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
-    
+
     not_expected.each do |pattern|
       failed_patterns << pattern if queries_ran.any?{ |sql| pattern === sql }
     end
@@ -207,12 +207,12 @@ class ActiveSupport::TestCase
     assert failed_patterns.empty?, <<~MSG
       Unexpected Query pattern(s) found:
         - #{failed_patterns.map(&:inspect).join('\n  - ')}
-      
+
       Queries Ran (queries_ran.size):
         - #{queries_ran.map{|l| l.gsub(/\n\s*/, "\n    ")}.join("\n  - ")}
     MSG
   end
-  
+
   def assert_queries(num = 1, options = {})
     SQLLogger.clear_log
     x = yield
@@ -226,9 +226,11 @@ class ActiveSupport::TestCase
     x
   end
 
-  def assert_posted(path, body, **nargs, &block)
-    nargs[:body] = body.is_a?(String) ? body : JSON.dump(body)
-    assert_requested(:post, "http://APIKEY@changebase.io#{path.delete_prefix('/')}", **nargs, &block)
+  def assert_posted(path, body, **nargs)
+    assert_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs) do |req|
+      byebug
+      (body.to_a - JSON(req.body).to_a).empty?
+    end
   end
 
   class SQLLogger
@@ -270,7 +272,7 @@ class ActiveSupport::TestCase
       unless ignore =~ sql
         if $debugging
         puts caller#.select { |l| l.start_with?(File.expand_path('../../lib', __FILE__)) }
-        puts "\n\n" 
+        puts "\n\n"
         end
       end
       self.class.log << sql unless ignore =~ sql
@@ -293,5 +295,5 @@ class ActiveSupport::TestCase
   alias :assert_not_predicate :refute_predicate
   alias :assert_not_respond_to :refute_respond_to
   alias :assert_not_same :refute_same
-  
+
 end
