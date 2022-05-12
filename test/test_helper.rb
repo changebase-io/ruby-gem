@@ -47,6 +47,15 @@ end
 
 $debugging = false
 
+# # If comparing times, nsec is not used by ActiveRecord, so truncate.
+# class Time
+#   def self.now
+#     t = Time.new
+#     t = t.change(nsec: t.nsec - (t.nsec % 1000))
+#     t
+#   end
+# end
+
 class ActionDispatch::IntegrationTest
 
   def setup
@@ -153,6 +162,27 @@ class ActiveSupport::TestCase
     self.class.class_variable_set(:@@suite_setup_run, true)
   end
 
+  # Don't remove usecs from time when using travel_to
+  def travel_to(date_or_time)
+    if date_or_time.is_a?(Date) && !date_or_time.is_a?(DateTime)
+      now = date_or_time.midnight.to_time
+    else
+      now = date_or_time.to_time
+    end
+
+    simple_stubs.stub_object(Time, :now) { now }
+    simple_stubs.stub_object(Date, :today) { now.to_date }
+    simple_stubs.stub_object(DateTime, :now) { now.to_date }
+
+    if block_given?
+      begin
+        yield
+      ensure
+        travel_back
+      end
+    end
+  end
+
   def debug
     ActiveRecord::Base.logger = Logger.new(STDOUT)
     $debugging = true
@@ -230,7 +260,7 @@ class ActiveSupport::TestCase
     a = a.keep_if do |k, v|
       b.keys.map(&:to_s).include?(k.to_s)
     end
-    
+
     a.each do |k, v|
       other_v = (b[k.to_sym] || b[k.to_s])
       if v.is_a?(Hash) && other_v.is_a?(Hash)
@@ -241,10 +271,10 @@ class ActiveSupport::TestCase
         end
       end
     end
-    
+
     a
   end
-  
+
   # Assert A contains B, A may have other keys
   def assert_contains(a, b, prefix=nil, top: nil)
     assert_nil(a) if b.nil?
@@ -252,10 +282,11 @@ class ActiveSupport::TestCase
 
     assert_equal(reduce_to(a, b), b)
   end
-  
+
   def assert_posted(path, body, **nargs)
-    assert_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs) do |req|
-      assert_contains(JSON.parse(req.body), body)
+    assert_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", at_least_times: 1, **nargs) do |req|
+      body = body.with_indifferent_access
+      reduce_to(JSON(req.body), body) == body
     end
   end
 

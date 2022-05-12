@@ -21,8 +21,11 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
   end
 
   test 'Base::with_metadata nil' do
-    ActiveRecord::Base.with_metadata(nil) do
-      @post.destroy
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
+      ActiveRecord::Base.with_metadata(nil) do
+        @post.destroy
+      end
     end
 
     case Changebase.mode
@@ -31,22 +34,24 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
     when 'inline'
       assert_posted('/transactions', {
           transaction: {
-            lsn: 1,
-            timestamp: "2022-05-10T12:04:53.397-04:00",
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
             events: [
-              { lsn: 6,
+              { lsn: timestamp.utc.iso8601(3),
                 type: "delete",
                 schema: "public",
                 table: "posts",
-                timestamp: "2022-05-10T12:32:14.966-04:00",
+                timestamp: timestamp.utc.iso8601(3),
                 columns: [
                   { index: 0,
+                    identity: true,
                     type: "bigint",
                     name: "id",
                     value: nil,
-                    previous_value: 1,
+                    previous_value: @post.id,
                   }, {
                     index: 1,
+                    identity: false,
                     type: "character varying(255)",
                     name: "title",
                     value: nil,
@@ -60,203 +65,238 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
     end
   end
 
-  # test 'Base::with_metadata {}' do
-  #   ActiveRecord::Base.with_metadata({}) do
-  #     @post.destroy
-  #   end
+  test 'Base::with_metadata {}' do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
+      ActiveRecord::Base.with_metadata({}) do
+        @post.destroy
+      end
+    end
 
-  #   case Changebase.mode
-  #   when 'replication'
-  #     assert_not_query(/INSERT INTO "changebase_metadata"/i)
-  #   when 'inline'
-  #     assert_posted('', {
-  #       transaction: {
-  #         lsn: 1,
-  #         timestamp: "2022-05-10T12:04:53.397-04:00",
-  #         metadata: {},
-  #         events: [
-  #           { lsn: 6,
-  #             type: "delete",
-  #             schema: "public",
-  #             table: "posts",
-  #             timestamp: "2022-05-10T12:32:14.966-04:00",
-  #             columns: [
-  #               { index: 1,
-  #                 type: "int4",
-  #                 name: "id",
-  #                 value: 1,
-  #               }, {
-  #                 index: 2,
-  #                 type: "text",
-  #                 name: "title",
-  #                 value: "one",
-  #               }
-  #             ]
-  #           }
-  #         ]
-  #       }})
-  #   end
-  # end
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          metadata: {},
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                  identity: true,
+                  type: "bigint",
+                  name: "id",
+                  value: nil,
+                  previous_value: @post.id,
+                }, {
+                  index: 1,
+                  identity: false,
+                  type: "character varying(255)",
+                  name: "title",
+                  value: nil,
+                  previous_value: "one"
+                }
+              ]
+            }
+          ]
+        }})
+    end
+  end
 
-  # test 'Base::with_metadata DATA' do
-  #   ActiveRecord::Base.with_metadata({user: 'tom'}) do
-  #     @post.destroy
-  #   end
+  test 'Base::with_metadata DATA' do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
+      ActiveRecord::Base.with_metadata({user: 'tom'}) do
+        @post.destroy
+      end
+    end
 
-  #   case Changebase.mode
-  #   when 'inline'
-  #     assert_posted('', {
-  #       transaction: {
-  #         lsn: 1,
-  #         timestamp: "2022-05-10T12:04:53.397-04:00",
-  #         metadata: { user: "tom" },
-  #         events: [
-  #           { lsn: 6,
-  #             type: "delete",
-  #             schema: "public",
-  #             table: "posts",
-  #             timestamp: "2022-05-10T12:32:14.966-04:00",
-  #             columns: [
-  #               { index: 1,
-  #                 type: "int4",
-  #                 name: "id",
-  #                 value: 1,
-  #               }, {
-  #                 index: 2,
-  #                 type: "text",
-  #                 name: "title",
-  #                 value: "one",
-  #               }
-  #             ]
-  #           }
-  #         ]
-  #       }})
-  #   when 'replication'
-  #     assert_query(<<~MSG)
-  #       INSERT INTO "changebase_metadata" ( version, data )
-  #       VALUES ( 1, '{"user":"tom"}' )
-  #       ON CONFLICT ( version )
-  #       DO UPDATE SET version = 1, data = '{"user":"tom"}';
-  #     MSG
-  #   end
-  # end
+    case Changebase.mode
+    when 'inline'
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          metadata: { user: "tom" },
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: nil,
+                    previous_value: @post.id,
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: nil,
+                    previous_value: "one"
+                  }
+              ]
+            }
+          ]
+        }})
+    when 'replication'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    end
+  end
 
-  # test 'Model::with_metadata nil' do
-  #   Post.with_metadata(nil) do
-  #     @post.destroy
-  #   end
+  test 'Model::with_metadata nil' do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
+      Post.with_metadata(nil) do
+        @post.destroy
+      end
+    end
 
-  #   case Changebase.mode
-  #   when 'replication'
-  #     assert_not_query(/INSERT INTO "changebase_metadata"/i)
-  #   when 'inline'
-  #     assert_posted('', {
-  #       transaction: {
-  #         lsn: 1,
-  #         timestamp: "2022-05-10T12:04:53.397-04:00",
-  #         events: [
-  #           { lsn: 6,
-  #             type: "delete",
-  #             schema: "public",
-  #             table: "posts",
-  #             timestamp: "2022-05-10T12:32:14.966-04:00",
-  #             columns: [
-  #               { index: 1,
-  #                 type: "int4",
-  #                 name: "id",
-  #                 value: 1,
-  #               }, {
-  #                 index: 2,
-  #                 type: "text",
-  #                 name: "title",
-  #                 value: "one",
-  #               }
-  #             ]
-  #           }
-  #         ]
-  #       }})
-  #   end
-  # end
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: nil,
+                    previous_value: @post.id,
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: nil,
+                    previous_value: "one"
+                  }
+              ]
+            }
+          ]
+        }})
+    end
+  end
 
-  # test 'Model::with_metadata {}' do
-  #   Post.with_metadata({}) do
-  #     @post.destroy
-  #   end
+  test 'Model::with_metadata {}' do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
+      Post.with_metadata({}) do
+        @post.destroy
+      end
+    end
 
-  #   case Changebase.mode
-  #   when 'replication'
-  #     assert_not_query(/INSERT INTO "changebase_metadata"/i)
-  #   when 'inline'
-  #     assert_posted('', {
-  #       transaction: {
-  #         lsn: 1,
-  #         timestamp: "2022-05-10T12:04:53.397-04:00",
-  #         metadata: {},
-  #         events: [
-  #           { lsn: 6,
-  #             type: "delete",
-  #             schema: "public",
-  #             table: "posts",
-  #             timestamp: "2022-05-10T12:32:14.966-04:00",
-  #             columns: [
-  #               { index: 1,
-  #                 type: "int4",
-  #                 name: "id",
-  #                 value: 1,
-  #               }, {
-  #                 index: 2,
-  #                 type: "text",
-  #                 name: "title",
-  #                 value: "one",
-  #               }
-  #             ]
-  #           }
-  #         ]
-  #       }})
-  #   end
-  # end
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          metadata: {},
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: nil,
+                    previous_value: @post.id,
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: nil,
+                    previous_value: "one"
+                  }
+              ]
+            }
+          ]
+        }})
+    end
+  end
 
-  # test 'Model::with_metadata DATA' do
-  #   Post.with_metadata({user: 'tom'}) do
-  #     @post.destroy
-  #   end
+  test 'Model::with_metadata DATA' do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
+      Post.with_metadata({user: 'tom'}) do
+        @post.destroy
+      end
+    end
 
-  #   case Changebase.mode
-  #   when 'replication'
-  #     assert_query(<<~MSG, mode: :replication)
-  #       INSERT INTO "changebase_metadata" ( version, data )
-  #       VALUES ( 1, '{"user":"tom"}' )
-  #       ON CONFLICT ( version )
-  #       DO UPDATE SET version = 1, data = '{"user":"tom"}';
-  #     MSG
-  #   when 'inline'
-  #     assert_posted('', {
-  #       transaction: {
-  #         lsn: 1,
-  #         timestamp: "2022-05-10T12:04:53.397-04:00",
-  #         metadata: { user: "tom" },
-  #         events: [
-  #           { lsn: 6,
-  #             type: "delete",
-  #             schema: "public",
-  #             table: "posts",
-  #             timestamp: "2022-05-10T12:32:14.966-04:00",
-  #             columns: [
-  #               { index: 1,
-  #                 type: "int4",
-  #                 name: "id",
-  #                 value: 1,
-  #               }, {
-  #                 index: 2,
-  #                 type: "text",
-  #                 name: "title",
-  #                 value: "one",
-  #               }
-  #             ]
-  #           }
-  #         ]
-  #       }})
-  #   end
-  # end
+    case Changebase.mode
+    when 'replication'
+      assert_query(<<~MSG, mode: :replication)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'inline'
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          metadata: { user: "tom" },
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: nil,
+                    previous_value: @post.id,
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: nil,
+                    previous_value: "one"
+                  }
+              ]
+            }
+          ]
+        }})
+    end
+  end
 
 end

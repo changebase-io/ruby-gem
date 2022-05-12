@@ -40,6 +40,7 @@ module Changebase
 
   def self.configure(**config)
     @config.merge!(config)
+    self.logger = @config[:logger] if @config[:logger]
   end
 
   def self.configured?
@@ -52,8 +53,15 @@ module Changebase
   end
 
   def self.logger
-    @logger ||= Logger.new(STDOUT)
+    return @logger if defined?(@logger)
+
+    @logger = Logger.new(STDOUT)
   end
+
+  def self.logger=(logger)
+    @logger = logger
+  end
+
 end
 
 require 'changebase/railtie' if defined?(Rails)
@@ -165,7 +173,7 @@ module Changebase
         diff:         diff.as_json,
         subject_type: subject_type,
         subject_id:   subject_id,
-        timestamp:    timestamp.iso8601(3),
+        timestamp:    timestamp.utc.iso8601(3),
         type:         type,
         transaction_id:     transaction_id,
         id:           id

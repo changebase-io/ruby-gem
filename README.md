@@ -47,27 +47,27 @@ Below are several diffent way of including metadata:
 
 ```ruby
   class ApplicationController < ActionController::Base
-    
+
     # Just a block returning a hash of metadata.
     changebase do
         { my: data }
     end
-    
+
     # Sets `release` in the metadata to the string RELEASE_SHA
     changebase :release, RELEASE_SHA
-    
+
     # Sets `request_id` in the metadata to the value returned from the `Proc`
     changebase :request_id, -> { request.uuid }
-    
+
     # Sets `user.id` in the metadata to the value returned from the
     # `current_user_id` function
     changebase :user, :id, :current_user_id
-    
+
     # Sets `user.name` in the metadata to the value returned from the block
     changebase :user, :name do
       current_user.name
     end
-    
+
     def current_user_id
       current_user.id
     end
@@ -132,6 +132,19 @@ will be sent to through the Changebase API. You will collect roughly the same
 information, but potentionally to miss events and changes in your database
 if you are not careful, or if another application accesses the database directly.
 
+##### Limitations
+
+- Any changes made to the database by ActiveRecord that does not first
+  instantiate the records will not be caputred. These methods include:
+  - [ActiveRecord::Relation#touch_all](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-touch_all)
+  - [ActiveRecord::Relation#update_all](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-update_all)
+  - [ActiveRecord::Relation#delete_all](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-delete_all)
+  - [ActiveRecord::Relation#delete_by](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-delete_by)
+- Any changes made to the database outside of the Rails application will not be
+  captured.
+- Ordering of events will not be guaranteed. The timestamp will be used as the
+  LSN, which may not be in the same order of transactions / events in the database.
+
 To configure Changebase in the `"inline"` mode create a initializer at
 `config/initializers/changebase.rb` with the following:
 
@@ -160,5 +173,5 @@ Changebase.configure(
 
 ## Bugs
 
-If you think you found a bug, please file a ticket on the [issue 
+If you think you found a bug, please file a ticket on the [issue
 tracker](https://github.com/changebase-io/ruby-gem/issues).

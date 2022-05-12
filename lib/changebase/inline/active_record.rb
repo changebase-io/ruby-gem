@@ -79,7 +79,7 @@ module Changebase
     def as_json
       {
         id:                   id,
-        # TODO: Add lsn
+        lsn:                  timestamp.utc.iso8601(3),
         timestamp:            timestamp.utc.iso8601(3),
         metadata:             metadata,
         events:               events.as_json
@@ -90,7 +90,7 @@ module Changebase
 
   class Event
 
-    attr_accessor :id, :database_id, :transaction_id, :lsn, :type, :schema,
+    attr_accessor :id, :database_id, :transaction_id, :type, :schema,
       :table, :timestamp, :created_at, :columns
 
     def initialize(attrs)
@@ -101,16 +101,14 @@ module Changebase
     end
 
     def as_json
-      # TODO: diff -> columns, schema, lsn
-      # TODO: remove subject_type, subject_id
       {
         id: id,
         transaction_id:     transaction_id,
-        lsn: lsn,
+        lsn:                timestamp.utc.iso8601(3),
         type: type,
         schema: schema,
         table: table,
-        timestamp:    timestamp.iso8601(3),
+        timestamp:    timestamp.utc.iso8601(3),
         columns:         columns.as_json,
       }.select { |k, v| !v.nil? }
     end
@@ -130,7 +128,7 @@ module Changebase
         def self.extended(other)
           other.after_create      { activehistory_track(:create) }
           other.after_update      { activehistory_track(:update) }
-          other.before_destroy    { activehistory_track(:destroy) }
+          other.before_destroy    { activehistory_track(:delete) }
         end
 
         # def inherited(subclass)
@@ -233,11 +231,11 @@ module Changebase
       end
 
       def activehistory_timestamp
-        @activehistory_timestamp ||= Time.now.utc
+        @activehistory_timestamp ||= Time.current
       end
 
       def with_transaction_returning_status
-        @activehistory_timestamp = Time.now.utc
+        @activehistory_timestamp = Time.current
         if !Thread.current[:activehistory_save_lock]
           run_save = true
           Thread.current[:activehistory_save_lock] = true
@@ -310,15 +308,16 @@ module Changebase
           col = {
             index: self.class.columns.index(attr_col),
             identity: Array(self.class.primary_key).include?(attr_name),
+            name: attr_name,
             type: attr_col.sql_type,
-            value:  if type == :destory
+            value:  if type == :delete
                       nil
                     else
                       attr_type.serialize(attr_value)
                     end
           }
 
-          if type == :destroy || self.attribute_changed?(attr_name)
+          if type == :delete || self.attribute_changed?(attr_name)
             col[:previous_value] = attr_type.serialize(self.attribute_was(attr_name))
           end
 
@@ -336,7 +335,7 @@ module Changebase
         #       end
         #     end
         #   end
-        # elsif type == :destroy
+        # elsif type == :delete
         #   relations_ids = self.class.reflect_on_all_associations.map { |r| "#{r.name.to_s.singularize}_ids" }
 
         #   diff = self.attributes.select do |k|
@@ -390,7 +389,6 @@ module Changebase
         else
           # Emit the event
           activehistory_transaction.event_for(self.class.table_name, id, {
-            # TODO: lsn
             schema: columns[0].try(:[], :schema) || self.class.connection.current_schema,
             table: self.class.table_name,
             type: type,
@@ -401,14 +399,14 @@ module Changebase
           # self.class.reflect_on_all_associations.each do |reflection|
           #   next if activehistory_tracking[:habtm_model]
 
-          #   if reflection.macro == :has_and_belongs_to_many && type == :destroy
+          #   if reflection.macro == :has_and_belongs_to_many && type == :delete
           #     activehistory_association_changed(reflection, removed: self.send("#{reflection.name.to_s.singularize}_ids"))
           #   elsif reflection.macro == :belongs_to && diff.has_key?(reflection.foreign_key)
           #     case type
           #     when :create
           #       old_id = nil
           #       new_id = diff[reflection.foreign_key][1]
-          #     when :destroy
+          #     when :delete
           #       old_id = diff[reflection.foreign_key][0]
           #       new_id = nil
           #     else
@@ -518,7 +516,7 @@ module Changebase
 
               dependent = if dependent
                             dependent
-                          elsif options[:dependent] == :destroy
+                          elsif options[:dependent] == :delete
                             :delete_all
                           else
                             options[:dependent]
@@ -605,7 +603,7 @@ module Changebase
           end
 
           def activehistory_encapsulate
-            @activehistory_timestamp = Time.now.utc
+            @activehistory_timestamp = Time.current
 
             if !Thread.current[:activehistory_save_lock]
               run_save = true

@@ -35,7 +35,7 @@ namespace :test do
         end
       end
     end
-    
+
     task(version) do
       installed_version = `gem list -e rails`.lines.last.match(/\(([^\)]+)\)/)[1].split(", ")
       if !installed_version.include?(version)
@@ -48,7 +48,7 @@ namespace :test do
   ADAPTERS.each do |adapter|
     task(adapter) { ENV["CB_ADAPTER"] = adapter }
   end
-  
+
   task majors: MAJORS.shuffle.map { |v| "test:#{v}" }
   task minors: MINORS.shuffle.map { |v| "test:#{v}" }
 end
