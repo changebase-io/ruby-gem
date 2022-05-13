@@ -1,7 +1,7 @@
 class Changebase::Engine < ::Rails::Engine
 
   config.changebase = ActiveSupport::OrderedOptions.new
-  config.changebase.mode = "replication"
+  # config.changebase.mode = nil
   config.changebase.metadata_table = "changebase_metadata"
 
   initializer :changebase do |app|

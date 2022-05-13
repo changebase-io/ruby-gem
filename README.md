@@ -136,6 +136,11 @@ if you are not careful, or if another application accesses the database directly
 
 - Any changes made to the database by ActiveRecord that does not first
   instantiate the records will not be caputred. These methods include:
+  - [ActiveRecord::ConnectionAdapters::DatabaseStatements#execute](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-execute)
+  - [ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_query](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-exec_query)
+  - [ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_update](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-exec_update)
+  - [ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_insert](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-exec_insert)
+  - [ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_delete](https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/DatabaseStatements.html#method-i-exec_delete)
   - [ActiveRecord::Persistence#delete](https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-delete)
   - [ActiveRecord::Persistence#update_column](https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-update_column)
   - [ActiveRecord::Persistence#update_columns](https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-update_columns)
