@@ -24,7 +24,7 @@ class ActiveRecord::DeleteTest < ActiveSupport::TestCase
     @post = Post.create!(title: 'one')
   end
 
-  test 'Base::with_metadata nil' do
+  test 'Base::with_metadata nil', only: :replication do
     timestamp = Time.current + 1.day
     travel_to timestamp do
       ActiveRecord::Base.with_metadata(nil) do

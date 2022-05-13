@@ -81,10 +81,9 @@ module Changebase
         id:                   id,
         lsn:                  timestamp.utc.iso8601(3),
         timestamp:            timestamp.utc.iso8601(3),
+        metadata:             metadata.as_json,
         events:               events.as_json
       }
-      result[:metadata] = metadata if !metadata.empty?
-      result
     end
 
   end
@@ -237,7 +236,7 @@ module Changebase
 
       def with_transaction_returning_status
         @activehistory_timestamp = Time.current
-        
+
         if !Thread.current[:activehistory_save_lock]
           run_save = true
           Thread.current[:activehistory_save_lock] = true
@@ -307,6 +306,8 @@ module Changebase
         columns = []
 
         self.attributes.each do |attr_name, attr_value|
+          previous_attr_value = self.previous_changes[attr_name].try(:[], 0) || attr_value
+
           next if activehistory_tracking[:exclude].include?(attr_name.to_sym)
 
           attr_type = self.type_for_attribute(attr_name)
@@ -325,7 +326,7 @@ module Changebase
             previous_value: if type == :insert
                               nil
                             else
-                              attr_type.serialize(self.attribute_was(attr_name))
+                              attr_type.serialize(previous_attr_value)#self.attribute_was(attr_name))
                             end
           }
 
