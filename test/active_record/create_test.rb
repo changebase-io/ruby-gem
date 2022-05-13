@@ -17,94 +17,312 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
   end
   
   test 'Base::with_metadata nil' do
-    assert_not_query(/INSERT INTO "changebase_metadata"/i) do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
       ActiveRecord::Base.with_metadata(nil) do
-        Post.create(title: 'first')
+        @post = Post.create(title: 'first')
       end
+    end
+    
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+          transaction: {
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
+            events: [
+              { lsn: timestamp.utc.iso8601(3),
+                type: "insert",
+                schema: "public",
+                table: "posts",
+                timestamp: timestamp.utc.iso8601(3),
+                columns: [
+                  { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: @post.id,
+                    previous_value: nil
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: "first",
+                    previous_value: nil
+                  }
+                ]
+              }
+            ]
+          }
+        })
     end
   end
 
   test 'Base::with_metadata {}' do
-    assert_not_query(/INSERT INTO "changebase_metadata"/i) do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
       ActiveRecord::Base.with_metadata({}) do
-        Post.create(title: 'first')
+        @post = Post.create(title: 'first')
       end
+    end
+    
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+          transaction: {
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
+            events: [
+              { lsn: timestamp.utc.iso8601(3),
+                type: "insert",
+                schema: "public",
+                table: "posts",
+                timestamp: timestamp.utc.iso8601(3),
+                columns: [
+                  { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: @post.id,
+                    previous_value: nil
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: "first",
+                    previous_value: nil
+                  }
+                ]
+              }
+            ]
+          }
+        })
     end
   end
 
   test 'Base::with_metadata DATA' do
-    expected_query = <<~MSG
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    MSG
-
-    assert_query(expected_query) do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
       ActiveRecord::Base.with_metadata({user: 'tom'}) do
-        Post.create(title: 'first')
+        @post = Post.create(title: 'first')
       end
     end
+    
+    case Changebase.mode
+    when 'replication'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'inline'
+      assert_posted('/transactions', {
+          transaction: {
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
+            metadata: { user: "tom" },
+            events: [
+              { lsn: timestamp.utc.iso8601(3),
+                type: "insert",
+                schema: "public",
+                table: "posts",
+                timestamp: timestamp.utc.iso8601(3),
+                columns: [
+                  { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: @post.id,
+                    previous_value: nil
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: "first",
+                    previous_value: nil
+                  }
+                ]
+              }
+            ]
+          }
+        })
+    end
   end
-  
+
   test 'Model::with_metadata nil' do
-    assert_not_query(/INSERT INTO "changebase_metadata"/i) do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
       Post.with_metadata(nil) do
-        Post.create(title: 'first')
+        @post = Post.create(title: 'first')
       end
+    end
+    
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+          transaction: {
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
+            events: [
+              { lsn: timestamp.utc.iso8601(3),
+                type: "insert",
+                schema: "public",
+                table: "posts",
+                timestamp: timestamp.utc.iso8601(3),
+                columns: [
+                  { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: @post.id,
+                    previous_value: nil
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: "first",
+                    previous_value: nil
+                  }
+                ]
+              }
+            ]
+          }
+        })
     end
   end
 
   test 'Model::with_metadata {}' do
-    assert_not_query(/INSERT INTO "changebase_metadata"/i) do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
       Post.with_metadata({}) do
-        Post.create(title: 'first')
+        @post = Post.create(title: 'first')
       end
+    end
+    
+    case Changebase.mode
+    when 'replication'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'inline'
+      assert_posted('/transactions', {
+          transaction: {
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
+            events: [
+              { lsn: timestamp.utc.iso8601(3),
+                type: "insert",
+                schema: "public",
+                table: "posts",
+                timestamp: timestamp.utc.iso8601(3),
+                columns: [
+                  { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: @post.id,
+                    previous_value: nil
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: "first",
+                    previous_value: nil
+                  }
+                ]
+              }
+            ]
+          }
+        })
     end
   end
 
   test 'Model::with_metadata DATA' do
-    expected_query = <<~MSG
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    MSG
-
-    assert_query(expected_query) do
+    timestamp = Time.current + 1.day
+    travel_to timestamp do
       Post.with_metadata({user: 'tom'}) do
-        Post.create(title: 'first')
+        @post = Post.create(title: 'first')
       end
+    end
+
+    case Changebase.mode
+    when 'replication'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'inline'
+      assert_posted('/transactions', {
+          transaction: {
+            lsn: timestamp.utc.iso8601(3),
+            timestamp: timestamp.utc.iso8601(3),
+            events: [
+              { lsn: timestamp.utc.iso8601(3),
+                type: "insert",
+                schema: "public",
+                table: "posts",
+                timestamp: timestamp.utc.iso8601(3),
+                columns: [
+                  { index: 0,
+                    identity: true,
+                    type: "bigint",
+                    name: "id",
+                    value: @post.id,
+                    previous_value: nil
+                  }, {
+                    index: 1,
+                    identity: false,
+                    type: "character varying(255)",
+                    name: "title",
+                    value: "first",
+                    previous_value: nil
+                  }
+                ]
+              }
+            ]
+          }
+        })
     end
   end
 
-
   # Hand written queires
   # --------------------
-  
-  test 'Model::with_metadata with a write via execute' do
+
+  test 'Model::with_metadata with a write via execute', only: :replication do
     expected_query = <<~MSG
       INSERT INTO "changebase_metadata" ( version, data )
       VALUES ( 1, '{"user":"tom"}' )
       ON CONFLICT ( version )
       DO UPDATE SET version = 1, data = '{"user":"tom"}';
     MSG
-    
+
     assert_query(expected_query) do
       Post.with_metadata({user: 'tom'}) do
         Post.connection.execute("INSERT INTO posts DEFAULT VALUES")
       end
     end
   end
-  
-  test 'Model::with_metadata with a write via exec_query' do
+
+  test 'Model::with_metadata with a write via exec_query', only: :replication do
     expected_query = <<~MSG
       INSERT INTO "changebase_metadata" ( version, data )
       VALUES ( 1, '{"user":"tom"}' )
       ON CONFLICT ( version )
       DO UPDATE SET version = 1, data = '{"user":"tom"}';
     MSG
-    
+
     assert_query(expected_query) do
       Post.with_metadata({user: 'tom'}) do
         Post.connection.exec_query("INSERT INTO posts DEFAULT VALUES")

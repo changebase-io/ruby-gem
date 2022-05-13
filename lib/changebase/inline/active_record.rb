@@ -127,7 +127,7 @@ module Changebase
 
       class_methods do
         def self.extended(other)
-          other.after_create      { activehistory_track(:create) }
+          other.after_create      { activehistory_track(:insert) }
           other.after_update      { activehistory_track(:update) }
           other.before_destroy    { activehistory_track(:delete) }
         end
@@ -237,6 +237,7 @@ module Changebase
 
       def with_transaction_returning_status
         @activehistory_timestamp = Time.current
+        
         if !Thread.current[:activehistory_save_lock]
           run_save = true
           Thread.current[:activehistory_save_lock] = true
@@ -320,12 +321,17 @@ module Changebase
                       nil
                     else
                       attr_type.serialize(attr_value)
-                    end
+                    end,
+            previous_value: if type == :insert
+                              nil
+                            else
+                              attr_type.serialize(self.attribute_was(attr_name))
+                            end
           }
 
-          if type == :delete || self.attribute_changed?(attr_name)
-            col[:previous_value] = attr_type.serialize(self.attribute_was(attr_name))
-          end
+          # if type == :delete || self.attribute_changed?(attr_name)
+          #   col[:previous_value] = attr_type.serialize(self.attribute_was(attr_name))
+          # end
 
           columns << col
         end

@@ -108,10 +108,9 @@ class ActiveSupport::TestCase
   # include WebMock::API
 
   # File 'lib/active_support/testing/declarative.rb'
-  def self.test(name, only: [], &block)
-    if Array(only).include?(ENV["CB_ADAPTER"].to_sym)
-      puts '!!!'
-    end
+  def self.test(name, only: nil, &block)
+    return if only && !Array(only).include?(ENV["CB_ADAPTER"].to_sym)
+
     test_name = "test_#{name.gsub(/\s+/, '_')}".to_sym
     defined = method_defined? test_name
     raise "#{test_name} is already defined in #{self}" if defined
@@ -158,7 +157,9 @@ class ActiveSupport::TestCase
         end
       end
     end
-
+    
+    SQLLogger.clear_log
+    
     self.class.class_variable_set(:@@suite_setup_run, true)
   end
 
@@ -209,7 +210,7 @@ class ActiveSupport::TestCase
 
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
-    puts queries_ran.map(&:inspect)
+
     expected.each do |pattern|
       failed_patterns << pattern unless queries_ran.any?{ |sql| pattern === sql }
     end
@@ -224,12 +225,10 @@ class ActiveSupport::TestCase
   end
 
   def assert_not_query(*not_expected)
-    if block_given?
-      queries_ran = SQLLogger.log.size
-      yield
-    else
-      queries_ran = 0
-    end
+    queries_ran = block_given? ? SQLLogger.log.size : 0
+
+    yield if block_given?
+
   ensure
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
