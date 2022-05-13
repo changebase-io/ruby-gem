@@ -300,7 +300,7 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
 
     case Changebase.mode
     when 'replication'
-      assert_query(<<~MSG, mode: :replication)
+      assert_query(<<~MSG)
         INSERT INTO "changebase_metadata" ( version, data )
         VALUES ( 1, '{"user":"tom"}' )
         ON CONFLICT ( version )
