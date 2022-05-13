@@ -77,13 +77,14 @@ module Changebase
     end
 
     def as_json
-      {
+      result = {
         id:                   id,
         lsn:                  timestamp.utc.iso8601(3),
         timestamp:            timestamp.utc.iso8601(3),
-        metadata:             metadata,
         events:               events.as_json
       }
+      result[:metadata] = metadata if !metadata.empty?
+      result
     end
 
   end

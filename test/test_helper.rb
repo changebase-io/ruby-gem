@@ -224,8 +224,12 @@ class ActiveSupport::TestCase
   end
 
   def assert_not_query(*not_expected)
-    queries_ran = SQLLogger.log.size
-    yield
+    if block_given?
+      queries_ran = SQLLogger.log.size
+      yield
+    else
+      queries_ran = 0
+    end
   ensure
     failed_patterns = []
     queries_ran = SQLLogger.log[queries_ran...]
@@ -287,6 +291,17 @@ class ActiveSupport::TestCase
     assert_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", at_least_times: 1, **nargs) do |req|
       body = body.with_indifferent_access
       reduce_to(JSON(req.body), body) == body
+    end
+  end
+
+  def assert_not_posted(path, body = nil, **nargs)
+    if body.nil?
+      assert_not_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs)
+    else
+      assert_not_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs) do |req|
+        body = body.with_indifferent_access
+        reduce_to(JSON(req.body), body) == body
+      end
     end
   end
 

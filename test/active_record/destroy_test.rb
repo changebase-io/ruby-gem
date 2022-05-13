@@ -1,5 +1,6 @@
 require 'test_helper'
 
+# These test test the ActiveRecord::Base#destroy method.
 class ActiveRecord::DestroyTest < ActiveSupport::TestCase
 
   schema do
@@ -18,6 +19,48 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
 
   setup do
     @post = Post.create!(title: 'one')
+  end
+
+  if Changebase.mode == "inline"
+    test "#destroy" do
+      timestamp = Time.current + 1.day
+      travel_to timestamp do
+        ActiveRecord::Base.with_metadata(nil) do
+          @post.destroy
+        end
+      end
+
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                  identity: true,
+                  type: "bigint",
+                  name: "id",
+                  value: nil,
+                  previous_value: @post.id,
+                }, {
+                  index: 1,
+                  identity: false,
+                  type: "character varying(255)",
+                  name: "title",
+                  value: nil,
+                  previous_value: "one"
+                }
+              ]
+            }
+          ]
+        }
+      })
+    end
   end
 
   test 'Base::with_metadata nil' do
@@ -81,7 +124,6 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
         transaction: {
           lsn: timestamp.utc.iso8601(3),
           timestamp: timestamp.utc.iso8601(3),
-          metadata: {},
           events: [
             { lsn: timestamp.utc.iso8601(3),
               type: "delete",
@@ -220,7 +262,6 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
         transaction: {
           lsn: timestamp.utc.iso8601(3),
           timestamp: timestamp.utc.iso8601(3),
-          metadata: {},
           events: [
             { lsn: timestamp.utc.iso8601(3),
               type: "delete",

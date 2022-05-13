@@ -136,6 +136,9 @@ if you are not careful, or if another application accesses the database directly
 
 - Any changes made to the database by ActiveRecord that does not first
   instantiate the records will not be caputred. These methods include:
+  - [ActiveRecord::Persistence#delete](https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-delete)
+  - [ActiveRecord::Persistence#update_column](https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-update_column)
+  - [ActiveRecord::Persistence#update_columns](https://api.rubyonrails.org/classes/ActiveRecord/Persistence.html#method-i-update_columns)
   - [ActiveRecord::Relation#touch_all](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-touch_all)
   - [ActiveRecord::Relation#update_all](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-update_all)
   - [ActiveRecord::Relation#delete_all](https://api.rubyonrails.org/classes/ActiveRecord/Relation.html#method-i-delete_all)
