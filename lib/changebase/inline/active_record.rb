@@ -90,6 +90,7 @@ module Changebase
 
   class Event
 
+    attr_accessor :subject_type, :subject_id
     attr_accessor :id, :database_id, :transaction_id, :type, :schema,
       :table, :timestamp, :created_at, :columns
 
@@ -118,7 +119,7 @@ module Changebase
   module Inline
 
     def self.current_transaction
-      Thread.current[:activehistory_transaction]
+      Thread.current[:changebase_transaction]
     end
 
     module ActiveRecord
@@ -126,23 +127,23 @@ module Changebase
 
       class_methods do
         def self.extended(other)
-          other.after_create      { activehistory_track(:insert) }
-          other.after_update      { activehistory_track(:update) }
-          other.before_destroy    { activehistory_track(:delete) }
+          other.after_create      { changebase_track(:insert) }
+          other.after_update      { changebase_track(:update) }
+          other.before_destroy    { changebase_track(:delete) }
         end
 
         # def inherited(subclass)
         #   super
-        #   subclass.instance_variable_set('@activehistory', @activehistory.clone) if defined?(@activehistory)
+        #   subclass.instance_variable_set('@changebase', @changebase.clone) if defined?(@changebase)
         # end
         #
         # def track(track_model = true, exclude: [], habtm_model: nil)
         #   if track_model == false
-        #     @activehistory = nil
+        #     @changebase = nil
         #   else
         #     options = { exclude: Array(exclude) }
         #     options[:habtm_model] = habtm_model if habtm_model
-        #     @activehistory = options
+        #     @changebase = options
         #   end
         # end
 
@@ -166,13 +167,13 @@ module Changebase
           }
 
           callback = ->(method, owner, record) {
-            owner.activehistory_association_changed(name, removed: [record.id])
+            owner.changebase_association_changed(name, removed: [record.id])
           }
           self.send("after_remove_for_#{name}=", Array(self.send("after_remove_for_#{name}")).compact + [callback])
         end
 
         # TODO: Shouldn't this just update the join table and not the fake column `#{relation_name}_ids`?
-        def activehistory_association_changed(id, reflection_or_relation_name, added: [], removed: [], timestamp: nil, type: :update, propagate: true)
+        def changebase_association_changed(id, reflection_or_relation_name, added: [], removed: [], timestamp: nil, type: :update, propagate: true)
           return if removed.empty? && added.empty?
           reflection = if reflection_or_relation_name.is_a?(String) || reflection_or_relation_name.is_a?(Symbol)
             reflect_on_association(reflection_or_relation_name)
@@ -208,7 +209,7 @@ module Changebase
               inverse_klass = inverse_reflection.active_record
 
               added.each do |added_id|
-                inverse_klass.activehistory_association_changed(added_id, inverse_reflection,
+                inverse_klass.changebase_association_changed(added_id, inverse_reflection,
                   added: [id],
                   timestamp: timestamp,
                   type: type,
@@ -217,7 +218,7 @@ module Changebase
               end
 
               removed.each do |removed_id|
-                inverse_klass.activehistory_association_changed(removed_id, inverse_reflection,
+                inverse_klass.changebase_association_changed(removed_id, inverse_reflection,
                   removed: [id],
                   timestamp: timestamp,
                   type: type,
@@ -230,23 +231,23 @@ module Changebase
 
       end
 
-      def activehistory_timestamp
-        @activehistory_timestamp ||= Time.current
+      def changebase_timestamp
+        @changebase_timestamp ||= Time.current
       end
 
       def with_transaction_returning_status
-        @activehistory_timestamp = Time.current
+        @changebase_timestamp = Time.current
 
-        if !Thread.current[:activehistory_save_lock]
+        if !Thread.current[:changebase_save_lock]
           run_save = true
-          Thread.current[:activehistory_save_lock] = true
-          if !Thread.current[:activehistory_transaction]
+          Thread.current[:changebase_save_lock] = true
+          if !Thread.current[:changebase_transaction]
             destroy_current_transaction = true
             # TODO: Move the metadata from the connection to a thread variable
             metadata = self.class.connection.instance_variable_get(:@changebase_metadata)
-            Thread.current[:activehistory_transaction] =
+            Thread.current[:changebase_transaction] =
               Changebase::Transaction.new(
-                timestamp: @activehistory_timestamp,
+                timestamp: @changebase_timestamp,
                 metadata: metadata)
           end
         end
@@ -261,20 +262,20 @@ module Changebase
 
           status = yield
           if status
-            if run_save && Changebase.configured? && !activehistory_transaction.events.empty?
-              activehistory_transaction&.save!
+            if run_save && Changebase.configured? && !changebase_transaction.events.empty?
+              changebase_transaction&.save!
             end
           else
             raise ::ActiveRecord::Rollback
           end
           status
         ensure
-          @activehistory_timestamp = nil
+          @changebase_timestamp = nil
           if run_save
-            Thread.current[:activehistory_save_lock] = false
+            Thread.current[:changebase_save_lock] = false
           end
           if destroy_current_transaction
-            Thread.current[:activehistory_transaction] = nil
+            Thread.current[:changebase_transaction] = nil
           end
 
           if has_transactional_callbacks? &&
@@ -284,19 +285,19 @@ module Changebase
         end
       end
 
-      def activehistory_tracking
-        if Changebase.configured?# && self.class.instance_variable_defined?(:@activehistory)
-          # self.class.instance_variable_get(:@activehistory)
+      def changebase_tracking
+        if Changebase.configured?# && self.class.instance_variable_defined?(:@changebase)
+          # self.class.instance_variable_get(:@changebase)
           {exclude: []}
         end
       end
 
-      def activehistory_transaction
+      def changebase_transaction
         Changebase::Inline.current_transaction
       end
 
-      def activehistory_track(type)
-        return if !activehistory_tracking
+      def changebase_track(type)
+        return if !changebase_tracking
 
         # Go through each of the Model#attributes and grab the type from the
         # Model#type_for_attribute(attr) to do the serialization, grab the
@@ -308,7 +309,7 @@ module Changebase
         self.attributes.each do |attr_name, attr_value|
           previous_attr_value = self.previous_changes[attr_name].try(:[], 0) || attr_value
 
-          next if activehistory_tracking[:exclude].include?(attr_name.to_sym)
+          next if changebase_tracking[:exclude].include?(attr_name.to_sym)
 
           attr_type = self.type_for_attribute(attr_name)
           attr_col = self.column_for_attribute(attr_name)
@@ -339,11 +340,11 @@ module Changebase
 
 
         # if type == :create || type == :update
-        #   columns = self.saved_changes.select { |k,v| !activehistory_tracking[:exclude].include?(k.to_sym) }
+        #   columns = self.saved_changes.select { |k,v| !changebase_tracking[:exclude].include?(k.to_sym) }
 
         #   if type == :create
         #     self.class.columns.each_with_index do |column, i|
-        #       if !columns[column.name] && !activehistory_tracking[:exclude].include?(column.name.to_sym) && column.default != self.attributes[column.name]
+        #       if !columns[column.name] && !changebase_tracking[:exclude].include?(column.name.to_sym) && column.default != self.attributes[column.name]
         #         [nil, self.attributes[column.name]]
         #       end
         #     end
@@ -352,7 +353,7 @@ module Changebase
         #   relations_ids = self.class.reflect_on_all_associations.map { |r| "#{r.name.to_s.singularize}_ids" }
 
         #   diff = self.attributes.select do |k|
-        #     !activehistory_tracking[:exclude].include?(k.to_sym)
+        #     !changebase_tracking[:exclude].include?(k.to_sym)
         #   end.map do |k, i|
         #     if relations_ids.include?(k)
         #       [ k, [ i, [] ] ]
@@ -373,47 +374,47 @@ module Changebase
         # end
 
         # TODO: If this is a HABTM create events for the join table
-        if activehistory_tracking[:habtm_model]
+        if changebase_tracking[:habtm_model]
         #   if type == :create
         #     left_side = self.class.reflect_on_association(:left_side)
-        #     left_side_id_name = activehistory_tracking[:habtm_model][:left_side][:foreign_key]
+        #     left_side_id_name = changebase_tracking[:habtm_model][:left_side][:foreign_key]
         #     left_side_id = self.send(left_side_id_name)
-        #     right_side_name = activehistory_tracking[:habtm_model].keys.find { |x| x != :left_side }
+        #     right_side_name = changebase_tracking[:habtm_model].keys.find { |x| x != :left_side }
         #     right_side = self.class.reflect_on_association(right_side_name)
-        #     right_side_id_name = activehistory_tracking[:habtm_model][right_side_name][:foreign_key]
+        #     right_side_id_name = changebase_tracking[:habtm_model][right_side_name][:foreign_key]
         #     right_side_id = self.send(right_side_id_name)
 
-        #     left_side.klass.activehistory_association_changed(
+        #     left_side.klass.changebase_association_changed(
         #       left_side_id,
-        #       activehistory_tracking[:habtm_model][:left_side][:inverse_of],
+        #       changebase_tracking[:habtm_model][:left_side][:inverse_of],
         #       added: [right_side_id],
-        #       timestamp: activehistory_timestamp,
+        #       timestamp: changebase_timestamp,
         #       propagate: false
         #     )
 
-        #     right_side.klass.activehistory_association_changed(
+        #     right_side.klass.changebase_association_changed(
         #       right_side_id,
-        #       activehistory_tracking[:habtm_model][right_side_name][:inverse_of],
+        #       changebase_tracking[:habtm_model][right_side_name][:inverse_of],
         #       added: [left_side_id],
-        #       timestamp: activehistory_timestamp,
+        #       timestamp: changebase_timestamp,
         #       propagate: false
         #     )
         #   end
         else
           # Emit the event
-          activehistory_transaction.event_for(self.class.table_name, id, {
+          changebase_transaction.event_for(self.class.table_name, id, {
             schema: columns[0].try(:[], :schema) || self.class.connection.current_schema,
             table: self.class.table_name,
             type: type,
             columns: columns,
-            timestamp: activehistory_timestamp
+            timestamp: changebase_timestamp
           })
 
           # self.class.reflect_on_all_associations.each do |reflection|
-          #   next if activehistory_tracking[:habtm_model]
+          #   next if changebase_tracking[:habtm_model]
 
           #   if reflection.macro == :has_and_belongs_to_many && type == :delete
-          #     activehistory_association_changed(reflection, removed: self.send("#{reflection.name.to_s.singularize}_ids"))
+          #     changebase_association_changed(reflection, removed: self.send("#{reflection.name.to_s.singularize}_ids"))
           #   elsif reflection.macro == :belongs_to && diff.has_key?(reflection.foreign_key)
           #     case type
           #     when :create
@@ -431,8 +432,8 @@ module Changebase
 
           #     if reflection.polymorphic?
           #     else
-          #       activehistory_association_changed(reflection, removed: [old_id]) if old_id
-          #       activehistory_association_changed(reflection, added:   [new_id]) if new_id
+          #       changebase_association_changed(reflection, removed: [old_id]) if old_id
+          #       changebase_association_changed(reflection, added:   [new_id]) if new_id
           #     end
 
           #   end
@@ -440,10 +441,10 @@ module Changebase
         end
       end
 
-      def activehistory_association_changed(relation_name, added: [], removed: [], timestamp: nil, type: :update)
-        timestamp ||= activehistory_timestamp
+      def changebase_association_changed(relation_name, added: [], removed: [], timestamp: nil, type: :update)
+        timestamp ||= changebase_timestamp
 
-        self.class.activehistory_association_changed(id, relation_name,
+        self.class.changebase_association_changed(id, relation_name,
           added: added,
           removed: removed,
           timestamp: timestamp,
@@ -451,13 +452,13 @@ module Changebase
         )
       end
 
-      def activehistory_association_udpated(reflection, id, added: [], removed: [], timestamp: nil, type: :update)
-        return if !activehistory_tracking || (removed.empty? && added.empty?)
+      def changebase_association_udpated(reflection, id, added: [], removed: [], timestamp: nil, type: :update)
+        return if !changebase_tracking || (removed.empty? && added.empty?)
         klass = reflection.active_record
         inverse_klass = reflection.klass
 
-        inverse_association = if activehistory_tracking.has_key?(:habtm_model)
-          inverse_klass.reflect_on_association(activehistory_tracking.dig(:habtm_model, reflection.name.to_s.singularize.to_sym, :inverse_of))
+        inverse_association = if changebase_tracking.has_key?(:habtm_model)
+          inverse_klass.reflect_on_association(changebase_tracking.dig(:habtm_model, reflection.name.to_s.singularize.to_sym, :inverse_of))
         else
           reflection.inverse_of
         end
@@ -467,13 +468,13 @@ module Changebase
           return
         end
 
-        event = activehistory_transaction.event_for(klass, id, {
+        event = changebase_transaction.event_for(klass, id, {
           type: type,
           timestamp: timestamp
         })
 
         event.diff ||= {}
-        if (reflection.collection? || activehistory_tracking[:habtm_model])
+        if (reflection.collection? || changebase_tracking[:habtm_model])
           diff_key = "#{reflection.name.to_s.singularize}_ids"
           event.diff[diff_key] ||= [[], []]
           event.diff[diff_key][0] |= removed
@@ -484,14 +485,14 @@ module Changebase
         end
 
         removed.each do |removed_id|
-          event = activehistory_transaction.event_for(inverse_klass, removed_id, {
+          event = changebase_transaction.event_for(inverse_klass, removed_id, {
             type: type,
             timestamp: timestamp
           })
 
           event.diff ||= {}
 
-          if inverse_association.collection? || activehistory_tracking[:habtm_model]
+          if inverse_association.collection? || changebase_tracking[:habtm_model]
             diff_key = "#{inverse_association.name.to_s.singularize}_ids"
             event.diff[diff_key] ||= [[], []]
             event.diff[diff_key][0] |= [id]
@@ -502,13 +503,13 @@ module Changebase
         end
 
         added.each do |added_id|
-          event = activehistory_transaction.event_for(inverse_klass, added_id, {
+          event = changebase_transaction.event_for(inverse_klass, added_id, {
             type: type,
             timestamp: timestamp
           })
 
           event.diff ||= {}
-          if inverse_association.collection? || activehistory_tracking[:habtm_model]
+          if inverse_association.collection? || changebase_tracking[:habtm_model]
             diff_key = "#{inverse_association.name.to_s.singularize}_ids"
             event.diff[diff_key] ||= [[], []]
             event.diff[diff_key][1] |= [id]
@@ -522,7 +523,7 @@ module Changebase
       module Associations
         class CollectionAssociation
           def delete_all(dependent = nil)
-            activehistory_encapsulate do
+            changebase_encapsulate do
               if dependent && ![:nullify, :delete_all].include?(dependent)
                 raise ArgumentError, "Valid values are :nullify or :delete_all"
               end
@@ -540,9 +541,9 @@ module Changebase
               elsif !owner.id.nil?
                 removed_ids = self.scope.pluck(:id)
 
-                event = owner.activehistory_transaction.event_for(self.reflection.active_record, owner.id, {
+                event = owner.changebase_transaction.event_for(self.reflection.active_record, owner.id, {
                   type: :update,
-                  timestamp: owner.activehistory_timestamp
+                  timestamp: owner.changebase_timestamp
                 })
 
                 diff_key = "#{self.reflection.name.to_s.singularize}_ids"
@@ -553,9 +554,9 @@ module Changebase
                 ainverse_of = self.klass.reflect_on_association(self.options[:inverse_of])
                 if ainverse_of
                   removed_ids.each do |removed_id|
-                    event = owner.activehistory_transaction.event_for(ainverse_of.active_record, removed_id, {
+                    event = owner.changebase_transaction.event_for(ainverse_of.active_record, removed_id, {
                       type: :update,
-                      timestamp: owner.activehistory_timestamp
+                      timestamp: owner.changebase_timestamp
                     })
                     event.diff ||= {}
                     if ainverse_of.collection?
@@ -580,7 +581,7 @@ module Changebase
           private
 
           def replace_records(new_target, original_target)
-            activehistory_encapsulate do
+            changebase_encapsulate do
               removed_records = target - new_target
               added_records = new_target - target
 
@@ -593,7 +594,7 @@ module Changebase
               end
 
               if !owner.new_record?
-                owner.activehistory_association_changed(self.reflection, added: added_records.map(&:id), removed: removed_records.map(&:id))
+                owner.changebase_association_changed(self.reflection, added: added_records.map(&:id), removed: removed_records.map(&:id))
               end
             end
 
@@ -601,7 +602,7 @@ module Changebase
           end
 
           def delete_or_destroy(records, method)
-            activehistory_encapsulate do
+            changebase_encapsulate do
               records = find(records) if records.any? { |record| record.kind_of?(Integer) || record.kind_of?(String) }
               records = records.flatten
               records.each { |record| raise_on_type_mismatch!(record) }
@@ -615,37 +616,37 @@ module Changebase
             end
           end
 
-          def activehistory_encapsulate
-            @activehistory_timestamp = Time.current
+          def changebase_encapsulate
+            @changebase_timestamp = Time.current
 
-            if !Thread.current[:activehistory_save_lock]
+            if !Thread.current[:changebase_save_lock]
               run_save = true
-              Thread.current[:activehistory_save_lock] = true
-              if Thread.current[:activehistory_transaction].nil?
+              Thread.current[:changebase_save_lock] = true
+              if Thread.current[:changebase_transaction].nil?
                 destroy_current_transaction = true
                 # TODO: Move the metadata from the connection to a thread variable
                 metadata = self.class.connection.instance_variable_get(:@changebase_metadata)
-                Thread.current[:activehistory_transaction] =
+                Thread.current[:changebase_transaction] =
                   Changebase::Transaction.new(
-                    timestamp: @activehistory_timestamp,
+                    timestamp: @changebase_timestamp,
                     metadata: metadata)
               end
             end
 
             result = yield
 
-            if run_save && Changebase.configured?  && !owner.activehistory_transaction.events.empty?
-              owner.activehistory_transaction&.save!
+            if run_save && Changebase.configured?  && !owner.changebase_transaction.events.empty?
+              owner.changebase_transaction&.save!
             end
 
             result
           ensure
-            @activehistory_timestamp = nil
+            @changebase_timestamp = nil
             if run_save
-              Thread.current[:activehistory_save_lock] = false
+              Thread.current[:changebase_save_lock] = false
             end
             if destroy_current_transaction
-              Thread.current[:activehistory_transaction] = nil
+              Thread.current[:changebase_transaction] = nil
             end
           end
         end
