@@ -31,16 +31,17 @@ module Changebase
       event
     end
 
+    # TODO: just use event!
     def event_for(type, id, new_options=nil)
       type = type.base_class.model_name.name if !type.is_a?(String)
-      event = @events.find { |a| a.subject_type.to_s == type.to_s && a.subject_id.to_s == id.to_s }
+      event = nil#@events.find { |a| a.subject_type.to_s == type.to_s && a.subject_id.to_s == id.to_s }
 
       if new_options
         if event
           event.diff.merge!(new_options[:diff]) if new_options.has_key?(:diff)
           event
         else
-          event!({ subject_type: type, subject_id: id, type: :update }.merge(new_options))
+          event!(new_options)
         end
 
       else
@@ -81,16 +82,16 @@ module Changebase
         id:                   id,
         lsn:                  timestamp.utc.iso8601(3),
         timestamp:            timestamp.utc.iso8601(3),
-        metadata:             metadata.as_json,
         events:               events.as_json
       }
+      result[:metadata] = metadata.as_json if !metadata.empty?
+      result
     end
 
   end
 
   class Event
 
-    attr_accessor :subject_type, :subject_id
     attr_accessor :id, :database_id, :transaction_id, :type, :schema,
       :table, :timestamp, :created_at, :columns
 
@@ -157,14 +158,6 @@ module Changebase
           association_foreign_key ||= "#{options[:class_name].underscore}_id" if options[:class_name]
           association_foreign_key ||= "#{name.singularize.underscore}_id"
           inverse_of = (options[:inverse_of] || self.name.underscore.pluralize).to_s
-
-          habtm_model.track habtm_model: {
-            :left_side => { foreign_key: foreign_key, inverse_of: name.to_s },
-            name.to_s.singularize.to_sym => {
-              foreign_key: association_foreign_key,
-              inverse_of: inverse_of
-            }
-          }
 
           callback = ->(method, owner, record) {
             owner.changebase_association_changed(name, removed: [record.id])
@@ -316,7 +309,7 @@ module Changebase
 
           col = {
             index: self.class.columns.index(attr_col),
-            identity: Array(self.class.primary_key).include?(attr_name),
+            identity: self.class.primary_key ? Array(self.class.primary_key).include?(attr_name) : true,
             name: attr_name,
             type: attr_col.sql_type,
             value:  if type == :delete

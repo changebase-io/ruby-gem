@@ -163,6 +163,17 @@ class ActiveSupport::TestCase
     self.class.class_variable_set(:@@suite_setup_run, true)
   end
 
+  # Clear logs for web request and http request
+  def reset!
+    SQLLogger.clear_log
+    WebMock::RequestRegistry.instance.reset!
+  end
+  # def setup
+  #   x = yield
+  #   reset!
+  #   x
+  # end
+  
   # Don't remove usecs from time when using travel_to
   def travel_to(date_or_time)
     if date_or_time.is_a?(Date) && !date_or_time.is_a?(DateTime)
