@@ -89,7 +89,6 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
 
   test '::create with new has_and_belongs_to_many association' do
     timestamp = Time.current + 1.day
-
     topic, post = travel_to(timestamp) do
       topic = Topic.new(name: "Known Unkowns")
       post = Post.create(title: "Black Holes", topics: [topic])
@@ -175,36 +174,49 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  # test '::update with adding existing has_and_belongs_to_many association' do
-  #   @property = create(:property)
-  #   @region = create(:region)
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @region.update(properties: [@property]) }
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @region, {
-  #       diff: {
-  #         property_ids: [[], [@property.id]]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @region.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update'
-  #     }
-  #
-  #     assert_action_for @property, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update',
-  #       subject_type: "Property",
-  #       subject_id: @property.id,
-  #       diff: {
-  #         region_ids: [[], [@region.id]]
-  #       }
-  #     }
-  #   end
-  # end
-  #
+  test '::update with adding existing has_and_belongs_to_many association' do
+    timestamp = Time.current + 1.day
+    topic = Topic.create(name: "Known Unkowns")
+    post = Post.create(title: "Black Holes", topics: [])
+
+    travel_to(timestamp) do
+      post.update(topics: [topic])
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: topic.id,
+                previous_value: nil
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
   # test '::update with adding new has_and_belongs_to_many association' do
   #   @region = create(:region)
   #   WebMock::RequestRegistry.instance.reset!
