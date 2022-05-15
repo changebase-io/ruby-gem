@@ -1,37 +1,33 @@
 require 'test_helper'
 
 class HasAndBelongsToManyTest < ActiveSupport::TestCase
-  
+
   schema do
     create_table "posts" do |t|
       t.string   "title",            limit: 255
     end
-    
+
     create_table "topics" do |t|
       t.string   "name",             limit: 255
     end
-    
+
     create_join_table :posts, :topics do |t|
     end
   end
-  
+
   class Post < ActiveRecord::Base
     has_and_belongs_to_many :topics
   end
-  
+
   class Topic < ActiveRecord::Base
     has_and_belongs_to_many :posts
   end
-  
+
   test '::create with existing has_and_belongs_to_many association', only: :inline do
     timestamp = Time.current + 1.day
-    # setup do
-      @topic = Topic.create(name: "Known Unkowns")
-    # end
-    reset!
-    
-    @post = travel_to(timestamp) do
-      Post.create(title: "Black Holes", topics: [@topic])
+    topic = Topic.create(name: "Known Unkowns")
+    post = travel_to(timestamp) do
+      Post.create(title: "Black Holes", topics: [topic])
     end
 
 
@@ -51,7 +47,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 identity: true,
                 type: "bigint",
                 name: "id",
-                value: @post.id,
+                value: post.id,
                 previous_value: nil
               }, {
                 index: 1,
@@ -74,14 +70,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 identity: true,
                 type: "bigint",
                 name: "post_id",
-                value: @post.id,
+                value: post.id,
                 previous_value: nil
               }, {
                 index: 1,
                 identity: true,
                 type: "bigint",
                 name: "topic_id",
-                value: @topic.id,
+                value: topic.id,
                 previous_value: nil
               }
             ]
@@ -91,43 +87,94 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  # test '::create with new has_and_belongs_to_many association' do
-  #   @region = travel_to(@time) { create(:region, properties: [build(:property)]) }
-  #   @property = @region.properties.first
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @region, {
-  #       diff: {
-  #         id: [nil, @region.id],
-  #         name: [nil, @region.name],
-  #         property_ids: [[], [@property.id]]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @region.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'create'
-  #     }
-  #
-  #     assert_action_for @property, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'create',
-  #       subject_type: "Property",
-  #       subject_id: @property.id,
-  #       diff: {
-  #         id: [nil, @property.id],
-  #         name: [nil, @property.name],
-  #         description: [nil, @property.description],
-  #         constructed: [nil, @property.constructed],
-  #         size: [nil, @property.size],
-  #         created_at: [nil, @property.created_at],
-  #         aliases: [nil, []],
-  #         active: [nil, @property.active],
-  #         region_ids: [[], [@region.id]]
-  #       }
-  #     }
-  #   end
-  # end
-  #
+  test '::create with new has_and_belongs_to_many association' do
+    timestamp = Time.current + 1.day
+
+    topic, post = travel_to(timestamp) do
+      topic = Topic.new(name: "Known Unkowns")
+      post = Post.create(title: "Black Holes", topics: [topic])
+      [ topic, post ]
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              { index: 0,
+                identity: true,
+                name: "id",
+                type: "bigint",
+                value: post.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: false,
+                name: "title",
+                type: "character varying(255)",
+                value: "Black Holes",
+                previous_value: nil
+              }
+            ]
+          }, {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "id",
+                type: "bigint",
+                value: topic.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: false,
+                name: "name",
+                type: "character varying(255)",
+                value: "Known Unkowns",
+                previous_value: nil
+              }
+            ]
+          }, {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: topic.id,
+                previous_value: nil
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
   # test '::update with adding existing has_and_belongs_to_many association' do
   #   @property = create(:property)
   #   @region = create(:region)
@@ -358,5 +405,5 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
   #
   # test 'has_and_belongs_to_many.clear'
   # test 'has_and_belongs_to_many.create'
-  
+
 end

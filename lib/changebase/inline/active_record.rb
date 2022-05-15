@@ -38,12 +38,12 @@ module Changebase
 
       if new_options
         if event
+          raise "diff -> columns plz"
           event.diff.merge!(new_options[:diff]) if new_options.has_key?(:diff)
           event
         else
           event!(new_options)
         end
-
       else
         event
       end

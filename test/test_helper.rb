@@ -157,9 +157,9 @@ class ActiveSupport::TestCase
         end
       end
     end
-    
+
     SQLLogger.clear_log
-    
+
     self.class.class_variable_set(:@@suite_setup_run, true)
   end
 
@@ -173,7 +173,7 @@ class ActiveSupport::TestCase
   #   reset!
   #   x
   # end
-  
+
   # Don't remove usecs from time when using travel_to
   def travel_to(date_or_time)
     if date_or_time.is_a?(Date) && !date_or_time.is_a?(DateTime)

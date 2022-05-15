@@ -218,7 +218,6 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
         transaction: {
           lsn: timestamp.utc.iso8601(3),
           timestamp: timestamp.utc.iso8601(3),
-          metadata: {},
           events: [
             { lsn: timestamp.utc.iso8601(3),
               type: "update",
@@ -228,15 +227,15 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
               columns: [
                 { index: 0,
                   identity: true,
-                  type: "bigint",
                   name: "id",
+                  type: "bigint",
                   value: @post.id,
                   previous_value: @post.id
                 }, {
                   index: 1,
                   identity: false,
-                  type: "character varying(255)",
                   name: "title",
+                  type: "character varying(255)",
                   value: "two",
                   previous_value: "one"
                 }
