@@ -26,6 +26,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
   test '::create with existing has_and_belongs_to_many association', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unkowns")
+    reset!
     post = travel_to(timestamp) do
       Post.create(title: "Black Holes", topics: [topic])
     end
@@ -44,18 +45,18 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
             timestamp: timestamp.utc.iso8601(3),
             columns: [
               { index: 0,
-                identity: true,
                 type: "bigint",
                 name: "id",
                 value: post.id,
-                previous_value: nil
+                previous_value: post.id,
+                identity: true
               }, {
                 index: 1,
-                identity: false,
                 type: "character varying(255)",
                 name: "title",
                 value: "Black Holes",
-                previous_value: nil
+                previous_value: nil,
+                identity: false
               }
             ]
           }, {
@@ -67,18 +68,18 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
             columns: [
               {
                 index: 0,
-                identity: true,
                 type: "bigint",
                 name: "post_id",
                 value: post.id,
-                previous_value: nil
+                previous_value: post.id,
+                identity: true
               }, {
                 index: 1,
-                identity: true,
                 type: "bigint",
                 name: "topic_id",
                 value: topic.id,
-                previous_value: nil
+                previous_value: topic.id,
+                identity: true
               }
             ]
           }
@@ -112,7 +113,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "id",
                 type: "bigint",
                 value: post.id,
-                previous_value: nil
+                previous_value: post.id
               }, {
                 index: 1,
                 identity: false,
@@ -135,7 +136,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "id",
                 type: "bigint",
                 value: topic.id,
-                previous_value: nil
+                previous_value: topic.id
               }, {
                 index: 1,
                 identity: false,
@@ -158,14 +159,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "post_id",
                 type: "bigint",
                 value: post.id,
-                previous_value: nil
+                previous_value: post.id
               }, {
                 index: 1,
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
                 value: topic.id,
-                previous_value: nil
+                previous_value: topic.id
               }
             ]
           }
@@ -178,6 +179,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unkowns")
     post = Post.create(title: "Black Holes", topics: [])
+    reset!
 
     travel_to(timestamp) do
       post.update(topics: [topic])
@@ -201,14 +203,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "post_id",
                 type: "bigint",
                 value: post.id,
-                previous_value: nil
+                previous_value: post.id
               }, {
                 index: 1,
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
                 value: topic.id,
-                previous_value: nil
+                previous_value: topic.id
               }
             ]
           }

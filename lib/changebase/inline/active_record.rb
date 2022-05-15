@@ -300,17 +300,17 @@ module Changebase
         columns = []
 
         self.attributes.each do |attr_name, attr_value|
-          previous_attr_value = self.previous_changes[attr_name].try(:[], 0) || attr_value
-
-          next if changebase_tracking[:exclude].include?(attr_name.to_sym)
+          # next if changebase_tracking[:exclude].include?(attr_name.to_sym)
+          next if type == :update && !self.previous_changes.has_key?(attr_name)
+          previous_attr_value = self.previous_changes[attr_name].try(:[], 0)
 
           attr_type = self.type_for_attribute(attr_name)
           attr_col = self.column_for_attribute(attr_name)
 
           col = {
             index: self.class.columns.index(attr_col),
-            identity: self.class.primary_key ? Array(self.class.primary_key).include?(attr_name) : true,
             name: attr_name,
+            identity: false,
             type: attr_col.sql_type,
             value:  if type == :delete
                       nil
@@ -320,18 +320,35 @@ module Changebase
             previous_value: if type == :insert
                               nil
                             else
-                              attr_type.serialize(previous_attr_value)#self.attribute_was(attr_name))
+                              attr_type.serialize(previous_attr_value)
                             end
           }
-
-          # if type == :delete || self.attribute_changed?(attr_name)
-          #   col[:previous_value] = attr_type.serialize(self.attribute_was(attr_name))
-          # end
 
           columns << col
         end
 
+        return if columns.empty?
 
+        (self.class.primary_key ? Array(self.class.primary_key) : self.class.column_names).each do |attr_name|
+          if column = columns.find { |c| c[:name] == attr_name }
+            column[:identity] = true
+            column[:previous_value] ||= self.type_for_attribute(attr_name).serialize(self.attributes[attr_name]) if type == :insert
+          else
+            attr_type = self.type_for_attribute(attr_name)
+            attr_col = self.column_for_attribute(attr_name)
+            attr_value = self.attributes[attr_name]
+            columns << {
+              index: self.class.columns.index(attr_col),
+              identity: true,
+              name: attr_name,
+              type: attr_col.sql_type,
+              value:  type == :delete ? nil : attr_type.serialize(attr_value),
+              previous_value: attr_type.serialize(attr_value)
+            }
+          end
+        end
+
+        columns.sort_by! { |c| c[:index] }
         # if type == :create || type == :update
         #   columns = self.saved_changes.select { |k,v| !changebase_tracking[:exclude].include?(k.to_sym) }
 
