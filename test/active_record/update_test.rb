@@ -20,6 +20,47 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
     @post = Post.create!(title: 'one')
   end
 
+  test "updating primary key", only: :inline do
+    timestamp = Time.current + 1.day
+    next_id = @post.class.connection.execute('SELECT nextval(\'posts_id_seq\')')[0]['nextval']
+    previous_id = @post.id
+    travel_to timestamp do
+      ActiveRecord::Base.with_metadata(nil) do
+        @post.update(id: next_id)
+      end
+    end
+
+    assert_posted('/transactions', {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          { lsn: timestamp.utc.iso8601(3),
+            type: "update",
+            schema: "public",
+            table: "posts",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              { index: 0,
+                identity: true,
+                type: "bigint",
+                name: "id",
+                value: next_id,
+                previous_value: previous_id
+              }, {
+                index: 1,
+                identity: false,
+                type: "character varying(255)",
+                name: "title",
+                value: "one",
+                previous_value: "one"
+              }
+            ]
+          }
+        ]
+      }})
+  end
+
   test 'Base::with_metadata nil' do
     timestamp = Time.current + 1.day
     travel_to timestamp do

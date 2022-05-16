@@ -160,10 +160,10 @@ module Changebase
           inverse_of = (options[:inverse_of] || self.name.underscore.pluralize).to_s
 
           callback = ->(method, owner, record) {
-            
+
             columns = habtm_model.columns.each_with_index.reduce([]) do |acc, (column, index)|
               byebug
-              
+
               attr_type = self.type_for_attribute(column.name)
               value = self.attributes[column.name]
               previous_value = self.previous_changes[column.name].try(:[], 0)
@@ -178,7 +178,7 @@ module Changebase
               }
               acc
             end
-            
+
             habtm_model.changebase_track(:delete)
           }
           self.send("after_remove_for_#{name}=", Array(self.send("after_remove_for_#{name}")).compact + [callback])
@@ -311,7 +311,7 @@ module Changebase
       def changebase_track(type)
         return if !changebase_tracking
         return if type == :update && self.previous_changes.empty?
-        
+
         # Go through each of the Model#attributes and grab the type from the
         # Model#type_for_attribute(attr) to do the serialization, grab the
         # column definition using Model#column_for_attribute(attr) to write the
@@ -319,12 +319,11 @@ module Changebase
         # in the database.
         columns = self.class.columns.each_with_index.reduce([]) do |acc, (column, index)|
           identity = self.class.primary_key ? self.class.primary_key == column.name : true
-          next if !identity && !self.previous_changes.has_key?(column.name)
-          
+
           attr_type = self.type_for_attribute(column.name)
           value = self.attributes[column.name]
           previous_value = self.previous_changes[column.name].try(:[], 0)
-          previous_value ||= value if identity
+          previous_value ||= value
           acc << {
             index: index,
             identity: identity,
@@ -335,7 +334,6 @@ module Changebase
           }
           acc
         end
-        
 
         # columns.sort_by! { |c| c[:index] }
         # if type == :create || type == :update
@@ -448,7 +446,7 @@ module Changebase
         #   columns: {},
         #   timestamp: timestamp || changebase_timestamp
         # })
-        
+
 
         self.class.changebase_association_changed(id, relation_name,
           added: added,
