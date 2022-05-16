@@ -31,24 +31,6 @@ module Changebase
       event
     end
 
-    # TODO: just use event!
-    def event_for(type, id, new_options=nil)
-      type = type.base_class.model_name.name if !type.is_a?(String)
-      event = nil#@events.find { |a| a.subject_type.to_s == type.to_s && a.subject_id.to_s == id.to_s }
-
-      if new_options
-        if event
-          raise "diff -> columns plz"
-          event.diff.merge!(new_options[:diff]) if new_options.has_key?(:diff)
-          event
-        else
-          event!(new_options)
-        end
-      else
-        event
-      end
-    end
-
     def self.create!(attrs={})
       transaction = self.new(attrs)
       transaction.save!
@@ -145,7 +127,7 @@ module Changebase
             acc
           end
 
-          owner.changebase_transaction.event_for(through_model.table_name, nil, {
+          owner.changebase_transaction.event!({
             schema: columns[0].try(:[], :schema) || through_model.connection.current_schema,
             table: through_model.table_name,
             type: :delete,
@@ -156,6 +138,17 @@ module Changebase
         x
       end
     end
+    
+    module HasMany
+      def delete_or_nullify_all_records(method)
+        if method == :delete_all
+          target.each do |record|
+            record.changebase_track(:delete)
+          end
+        end
+        super
+      end
+    end
 
     module ActiveRecord
       extend ActiveSupport::Concern
@@ -164,8 +157,9 @@ module Changebase
         def self.extended(other)
           other.after_create      { changebase_track(:insert) }
           other.after_update      { changebase_track(:update) }
-          other.before_destroy    { changebase_track(:delete) }
+          other.after_destroy    { changebase_track(:delete) }
           ::ActiveRecord::Associations::HasManyThroughAssociation.prepend(Inline::Through)
+          ::ActiveRecord::Associations::HasManyAssociation.prepend(Inline::HasMany)
         end
 
         # def inherited(subclass)
@@ -182,64 +176,6 @@ module Changebase
         #     @changebase = options
         #   end
         # end
-
-        # TODO: Shouldn't this just update the join table and not the fake column `#{relation_name}_ids`?
-        def changebase_association_changed(id, reflection_or_relation_name, added: [], removed: [], timestamp: nil, type: :update, propagate: true)
-          return if removed.empty? && added.empty?
-          reflection = if reflection_or_relation_name.is_a?(String) || reflection_or_relation_name.is_a?(Symbol)
-            reflect_on_association(reflection_or_relation_name)
-          else
-            reflection_or_relation_name
-          end
-
-          event = Changebase::Inline.current_transaction.event_for(self, id, { type: type, timestamp: timestamp })
-
-          if reflection
-            if reflection.collection?
-              column_name = "#{reflection.name.to_s.singularize}_ids"
-
-              event.columns[column_name] ||= [[], []]
-              event.columns[column_name][0] |= removed
-              event.columns[column_name][1] |= added
-
-              in_common = (event.columns[column_name][0] & event.columns[column_name][1])
-              if !in_common.empty?
-                event.columns[column_name][0] = event.columns[column_name][0] - in_common
-                event.columns[column_name][1] = event.columns[column_name][1] - in_common
-              end
-            else
-              column_name = "#{reflection.name.to_s.singularize}_id"
-              if event.columns.has_key?(column_name) && event.columns[column_name][0] == added.first
-                event.columns.delete(column_name)
-              else
-                event.columns[column_name] ||= [removed.first, added.first]
-              end
-            end
-
-            if propagate && inverse_reflection = reflection.inverse_of
-              inverse_klass = inverse_reflection.active_record
-
-              added.each do |added_id|
-                inverse_klass.changebase_association_changed(added_id, inverse_reflection,
-                  added: [id],
-                  timestamp: timestamp,
-                  type: type,
-                  propagate: false
-                )
-              end
-
-              removed.each do |removed_id|
-                inverse_klass.changebase_association_changed(removed_id, inverse_reflection,
-                  removed: [id],
-                  timestamp: timestamp,
-                  type: type,
-                  propagate: false
-                )
-              end
-            end
-          end
-        end
-
       end
 
       def changebase_timestamp
@@ -342,193 +278,14 @@ module Changebase
           acc
         end
 
-        # columns.sort_by! { |c| c[:index] }
-        # if type == :create || type == :update
-        #   columns = self.saved_changes.select { |k,v| !changebase_tracking[:exclude].include?(k.to_sym) }
-
-        #   if type == :create
-        #     self.class.columns.each_with_index do |column, i|
-        #       if !columns[column.name] && !changebase_tracking[:exclude].include?(column.name.to_sym) && column.default != self.attributes[column.name]
-        #         [nil, self.attributes[column.name]]
-        #       end
-        #     end
-        #   end
-        # elsif type == :delete
-        #   relations_ids = self.class.reflect_on_all_associations.map { |r| "#{r.name.to_s.singularize}_ids" }
-
-        #   diff = self.attributes.select do |k|
-        #     !changebase_tracking[:exclude].include?(k.to_sym)
-        #   end.map do |k, i|
-        #     if relations_ids.include?(k)
-        #       [ k, [ i, [] ] ]
-        #     else
-        #       [ k, [ i, nil ] ]
-        #     end
-        #   end.to_h
-        # end
-
-        # if type == :update
-        #   diff_without_timestamps = if self.class.record_timestamps
-        #     diff.keys - (self.class.send(:timestamp_attributes_for_update_in_model) + self.class.send(:timestamp_attributes_for_create_in_model))
-        #   else
-        #     diff.keys
-        #   end
-
-        #   return if diff_without_timestamps.empty?
-        # end
-
-        # TODO: If this is a HABTM create events for the join table
-        if changebase_tracking[:habtm_model]
-        #   if type == :create
-        #     left_side = self.class.reflect_on_association(:left_side)
-        #     left_side_id_name = changebase_tracking[:habtm_model][:left_side][:foreign_key]
-        #     left_side_id = self.send(left_side_id_name)
-        #     right_side_name = changebase_tracking[:habtm_model].keys.find { |x| x != :left_side }
-        #     right_side = self.class.reflect_on_association(right_side_name)
-        #     right_side_id_name = changebase_tracking[:habtm_model][right_side_name][:foreign_key]
-        #     right_side_id = self.send(right_side_id_name)
-
-        #     left_side.klass.changebase_association_changed(
-        #       left_side_id,
-        #       changebase_tracking[:habtm_model][:left_side][:inverse_of],
-        #       added: [right_side_id],
-        #       timestamp: changebase_timestamp,
-        #       propagate: false
-        #     )
-
-        #     right_side.klass.changebase_association_changed(
-        #       right_side_id,
-        #       changebase_tracking[:habtm_model][right_side_name][:inverse_of],
-        #       added: [left_side_id],
-        #       timestamp: changebase_timestamp,
-        #       propagate: false
-        #     )
-        #   end
-        else
-          # Emit the event
-          changebase_transaction.event_for(self.class.table_name, id, {
-            schema: columns[0].try(:[], :schema) || self.class.connection.current_schema,
-            table: self.class.table_name,
-            type: type,
-            columns: columns,
-            timestamp: changebase_timestamp
-          })
-
-          # self.class.reflect_on_all_associations.each do |reflection|
-          #   next if changebase_tracking[:habtm_model]
-
-          #   if reflection.macro == :has_and_belongs_to_many && type == :delete
-          #     changebase_association_changed(reflection, removed: self.send("#{reflection.name.to_s.singularize}_ids"))
-          #   elsif reflection.macro == :belongs_to && diff.has_key?(reflection.foreign_key)
-          #     case type
-          #     when :create
-          #       old_id = nil
-          #       new_id = diff[reflection.foreign_key][1]
-          #     when :delete
-          #       old_id = diff[reflection.foreign_key][0]
-          #       new_id = nil
-          #     else
-          #       old_id = diff[reflection.foreign_key][0]
-          #       new_id = diff[reflection.foreign_key][1]
-          #     end
-
-          #     relation_id = self.id || diff.find { |k, v| k != foreign_key }[1][1]
-
-          #     if reflection.polymorphic?
-          #     else
-          #       changebase_association_changed(reflection, removed: [old_id]) if old_id
-          #       changebase_association_changed(reflection, added:   [new_id]) if new_id
-          #     end
-
-          #   end
-          # end
-        end
-      end
-
-      def changebase_association_changed(relation_name, added: [], removed: [], timestamp: nil, type: :update)
-        # changebase_transaction.event_for(self.class.table_name, id, {
-        #   schema: columns[0].try(:[], :schema) || self.class.connection.current_schema,
-        #   table: self.class.table_name,
-        #   type: type,
-        #   columns: {},
-        #   timestamp: timestamp || changebase_timestamp
-        # })
-
-
-        self.class.changebase_association_changed(id, relation_name,
-          added: added,
-          removed: removed,
-          timestamp: timestamp,
-          type: type
-        )
-      end
-
-      def changebase_association_udpated(reflection, id, added: [], removed: [], timestamp: nil, type: :update)
-        return if !changebase_tracking || (removed.empty? && added.empty?)
-        klass = reflection.active_record
-        inverse_klass = reflection.klass
-
-        inverse_association = if changebase_tracking.has_key?(:habtm_model)
-          inverse_klass.reflect_on_association(changebase_tracking.dig(:habtm_model, reflection.name.to_s.singularize.to_sym, :inverse_of))
-        else
-          reflection.inverse_of
-        end
-
-        if inverse_association.nil?
-          puts "NO INVERSE for #{self.class}.#{reflection.name}!!!"
-          return
-        end
-
-        event = changebase_transaction.event_for(klass, id, {
+        # Emit the event
+        changebase_transaction.event!({
+          schema: columns[0].try(:[], :schema) || self.class.connection.current_schema,
+          table: self.class.table_name,
           type: type,
-          timestamp: timestamp
+          columns: columns,
+          timestamp: changebase_timestamp
         })
-
-        event.diff ||= {}
-        if (reflection.collection? || changebase_tracking[:habtm_model])
-          diff_key = "#{reflection.name.to_s.singularize}_ids"
-          event.diff[diff_key] ||= [[], []]
-          event.diff[diff_key][0] |= removed
-          event.diff[diff_key][1] |= added
-        else
-          diff_key = "#{reflection.name.to_s.singularize}_id"
-          event.diff[diff_key] ||= [removed.first, added.first]
-        end
-
-        removed.each do |removed_id|
-          event = changebase_transaction.event_for(inverse_klass, removed_id, {
-            type: type,
-            timestamp: timestamp
-          })
-
-          event.diff ||= {}
-
-          if inverse_association.collection? || changebase_tracking[:habtm_model]
-            diff_key = "#{inverse_association.name.to_s.singularize}_ids"
-            event.diff[diff_key] ||= [[], []]
-            event.diff[diff_key][0] |= [id]
-          else
-            diff_key = "#{inverse_association.name.to_s.singularize}_id"
-            event.diff[diff_key] ||= [id, nil]
-          end
-        end
-
-        added.each do |added_id|
-          event = changebase_transaction.event_for(inverse_klass, added_id, {
-            type: type,
-            timestamp: timestamp
-          })
-
-          event.diff ||= {}
-          if inverse_association.collection? || changebase_tracking[:habtm_model]
-            diff_key = "#{inverse_association.name.to_s.singularize}_ids"
-            event.diff[diff_key] ||= [[], []]
-            event.diff[diff_key][1] |= [id]
-          else
-            diff_key = "#{inverse_association.name.to_s.singularize}_id"
-            event.diff[diff_key] ||= [nil, id]
-          end
-        end
       end
 
       module Associations

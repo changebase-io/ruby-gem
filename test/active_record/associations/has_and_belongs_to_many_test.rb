@@ -311,118 +311,194 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
         ]
       }
     })
-
-
   end
 
-  # test '::update with removing has_and_belongs_to_many association' do
-  #   @property = create(:property)
-  #   @region = create(:region, properties: [@property])
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @region.update(properties: []) }
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @region, {
-  #       diff: {
-  #         property_ids: [[@property.id], []]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @region.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update'
-  #     }
-  #
-  #     assert_action_for @property, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update',
-  #       subject_type: "Property",
-  #       subject_id: @property.id,
-  #       diff: {
-  #         region_ids: [[@region.id], []]
-  #       }
-  #     }
-  #   end
-  # end
-  #
-  # test '::update with replacing has_and_belongs_to_many association' do
-  #   @property1 = create(:property)
-  #   @property2 = create(:property)
-  #   @region = create(:region, properties: [@property1])
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @region.update(properties: [@property2]) }
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @region, {
-  #       diff: {
-  #         property_ids: [[@property1.id], [@property2.id]]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @region.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update'
-  #     }
-  #
-  #     assert_action_for @property1, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update',
-  #       subject_type: "Property",
-  #       subject_id: @property1.id,
-  #       diff: {
-  #         region_ids: [[@region.id], []]
-  #       }
-  #     }
-  #
-  #     assert_action_for @property2, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update',
-  #       subject_type: "Property",
-  #       subject_id: @property2.id,
-  #       diff: {
-  #         region_ids: [[], [@region.id]]
-  #       }
-  #     }
-  #   end
-  # end
-  #
-  # test '::destroying updates has_and_belongs_to_many associations' do
-  #   @property = create(:property)
-  #   @region = create(:region, properties: [@property])
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @region.destroy }
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @region, {
-  #       diff: {
-  #         id: [@region.id, nil],
-  #         name: [@region.name, nil],
-  #         property_ids: [[@property.id], []]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @region.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'destroy'
-  #     }.as_json
-  #
-  #     assert_action_for @property, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update',
-  #       subject_type: "Property",
-  #       subject_id: @property.id,
-  #       diff: {
-  #         region_ids: [[@region.id], []]
-  #       }
-  #     }.as_json
-  #   end
-  # end
-  #
-  # test 'has_and_belongs_to_many <<'
-  # test 'has_and_belongs_to_many.delete'
-  # test 'has_and_belongs_to_many.destroy'
-  # test 'has_and_belongs_to_many='
-  #
+  test '::update with removing has_and_belongs_to_many association' do
+    timestamp = Time.current + 1.day
+    topic = Topic.create(name: "Known Unkowns")
+    post = Post.create(title: "Black Holes", topics: [topic])
+    reset!
+
+    travel_to(timestamp) do
+      post.update(topics: [])
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "delete",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: nil,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: nil,
+                previous_value: topic.id
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
+  test '::update with replacing has_and_belongs_to_many association' do
+    timestamp = Time.current + 1.day
+    topic1 = Topic.create(name: "Known Unknowns")
+    topic2 = Topic.create(name: "Known Knowns")
+    post = Post.create(title: "Black Holes", topics: [topic1])
+    reset!
+
+    travel_to(timestamp) do
+      post.update(topics: [topic2])
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "delete",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: nil,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: nil,
+                previous_value: topic1.id
+              }
+            ]
+          },
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: topic2.id,
+                previous_value: nil
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
+  test '::destroying updates has_and_belongs_to_many associations' do
+    timestamp = Time.current + 1.day
+    topic = Topic.create(name: "Known Unknowns")
+    post = Post.create(title: "Black Holes", topics: [topic])
+    reset!
+
+    travel_to(timestamp) do
+      post.destroy
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "delete",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: nil,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: nil,
+                previous_value: topic.id
+              }
+            ]
+          },
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "delete",
+            schema: "public",
+            table: "posts",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "id",
+                type: "bigint",
+                value: nil,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: false,
+                name: "title",
+                type: "character varying(255)",
+                value: nil,
+                previous_value: "Black Holes"
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
+  test 'has_and_belongs_to_many <<'
+  test 'has_and_belongs_to_many.delete'
+  test 'has_and_belongs_to_many.destroy'
+  test 'has_and_belongs_to_many='
+
   # test 'has_and_belongs_to_many with different class name' do
   #   @photo = create(:photo)
   #   @property = create(:property)
