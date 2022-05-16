@@ -499,59 +499,50 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
   test 'has_and_belongs_to_many.destroy'
   test 'has_and_belongs_to_many='
 
-  # test 'has_and_belongs_to_many with different class name' do
-  #   @photo = create(:photo)
-  #   @property = create(:property)
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @property.update(attachments: [@photo]) }
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @property, {
-  #       diff: {
-  #         attachment_ids: [[], [@photo.id]]
-  #       },
-  #       subject_type: "Property",
-  #       subject_id: @property.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update'
-  #     }
-  #   end
-  #
-  # end
-  #
-  #
-  # test 'has_and_belongs_to_many_ids=' do
-  #   @parent = create(:region)
-  #   @child = create(:region)
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @child.parent_ids = [@parent.id] }
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @child, {
-  #       diff: {
-  #         parent_ids: [[], [@parent.id]]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @child.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update'
-  #     }.as_json
-  #
-  #     assert_action_for @parent, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update',
-  #       subject_type: "Region",
-  #       subject_id: @parent.id,
-  #       diff: {
-  #         child_ids: [[], [@child.id]]
-  #       }
-  #     }.as_json
-  #   end
-  # end
-  #
-  # test 'has_and_belongs_to_many.clear'
-  # test 'has_and_belongs_to_many.create'
+  test 'has_and_belongs_to_many_ids=' do
+    timestamp = Time.current + 1.day
+    topic = Topic.create(name: "Known Unknowns")
+    post = Post.create(title: "Black Holes")
+    reset!
 
+    travel_to(timestamp) do
+      post.topic_ids = [topic.id]
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: topic.id,
+                previous_value: nil
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
+  test 'has_and_belongs_to_many.clear'
+  test 'has_and_belongs_to_many.create'
 end
