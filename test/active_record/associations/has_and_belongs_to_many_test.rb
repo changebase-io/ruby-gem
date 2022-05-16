@@ -49,7 +49,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 type: "bigint",
                 name: "id",
                 value: post.id,
-                previous_value: post.id
+                previous_value: nil
               }, {
                 index: 1,
                 identity: false,
@@ -71,14 +71,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 type: "bigint",
                 name: "post_id",
                 value: post.id,
-                previous_value: post.id,
+                previous_value: nil,
                 identity: true
               }, {
                 index: 1,
                 type: "bigint",
                 name: "topic_id",
                 value: topic.id,
-                previous_value: topic.id,
+                previous_value: nil,
                 identity: true
               }
             ]
@@ -113,7 +113,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "id",
                 type: "bigint",
                 value: post.id,
-                previous_value: post.id
+                previous_value: nil
               }, {
                 index: 1,
                 identity: false,
@@ -136,7 +136,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "id",
                 type: "bigint",
                 value: topic.id,
-                previous_value: topic.id
+                previous_value: nil
               }, {
                 index: 1,
                 identity: false,
@@ -159,14 +159,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "post_id",
                 type: "bigint",
                 value: post.id,
-                previous_value: post.id
+                previous_value: nil
               }, {
                 index: 1,
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
                 value: topic.id,
-                previous_value: topic.id
+                previous_value: nil
               }
             ]
           }
@@ -203,14 +203,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "post_id",
                 type: "bigint",
                 value: post.id,
-                previous_value: post.id
+                previous_value: nil
               }, {
                 index: 1,
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
                 value: topic.id,
-                previous_value: topic.id
+                previous_value: nil
               }
             ]
           }
@@ -227,9 +227,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
 
     new_topic = travel_to(timestamp) do
       new_topic = Topic.new(name: "Known Knowns")
-      debug do
-        post.update(topics: [new_topic])
-      end
+      post.update(topics: [new_topic])
       new_topic
     end
 
@@ -250,14 +248,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 identity: true,
                 name: "post_id",
                 type: "bigint",
-                value: post.id,
+                value: nil,
                 previous_value: post.id
               }, {
                 index: 1,
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
-                value: topic.id,
+                value: nil,
                 previous_value: topic.id
               }
             ]
@@ -275,7 +273,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "id",
                 type: "bigint",
                 value: new_topic.id,
-                previous_value: new_topic.id
+                previous_value:nil
               }, {
                 index: 1,
                 identity: false,
@@ -299,14 +297,14 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 name: "post_id",
                 type: "bigint",
                 value: post.id,
-                previous_value: post.id
+                previous_value: nil
               }, {
                 index: 1,
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
                 value: new_topic.id,
-                previous_value: new_topic.id
+                previous_value: nil
               }
             ]
           }

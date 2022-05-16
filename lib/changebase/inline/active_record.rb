@@ -125,28 +125,26 @@ module Changebase
 
     module Through
       extend ActiveSupport::Concern
-      
+
       def delete_records(records, method)
         x = super
         records.each do |record|
-          byebug
           through_model = source_reflection.active_record
-          
+
           columns = through_model.columns.each_with_index.reduce([]) do |acc, (column, index)|
             attr_type = through_model.type_for_attribute(column.name)
-            value = attr_type.serialize(column.name == source_reflection.foreign_key ? record.id : owner.id)
-            previous_value = value
+            previous_value = attr_type.serialize(column.name == source_reflection.foreign_key ? record.id : owner.id)
             acc << {
               index: index,
               identity: true,
               name: column.name,
               type: column.sql_type,
-              value: value,
-              previous_value: value
+              value: nil,
+              previous_value: previous_value
             }
             acc
           end
-          
+
           owner.changebase_transaction.event_for(through_model.table_name, nil, {
             schema: columns[0].try(:[], :schema) || through_model.connection.current_schema,
             table: through_model.table_name,
@@ -158,7 +156,7 @@ module Changebase
         x
       end
     end
-    
+
     module ActiveRecord
       extend ActiveSupport::Concern
 
@@ -324,7 +322,15 @@ module Changebase
           attr_type = self.type_for_attribute(column.name)
           value = self.attributes[column.name]
           previous_value = self.previous_changes[column.name].try(:[], 0)
-          previous_value ||= value
+
+          case type
+          when :update
+            previous_value ||= value
+          when :delete
+            previous_value ||= value
+            value = nil
+          end
+
           acc << {
             index: index,
             identity: identity,
