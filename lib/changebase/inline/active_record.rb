@@ -123,6 +123,42 @@ module Changebase
       Thread.current[:changebase_transaction]
     end
 
+    module Through
+      extend ActiveSupport::Concern
+      
+      def delete_records(records, method)
+        x = super
+        records.each do |record|
+          byebug
+          through_model = source_reflection.active_record
+          
+          columns = through_model.columns.each_with_index.reduce([]) do |acc, (column, index)|
+            attr_type = through_model.type_for_attribute(column.name)
+            value = attr_type.serialize(column.name == source_reflection.foreign_key ? record.id : owner.id)
+            previous_value = value
+            acc << {
+              index: index,
+              identity: true,
+              name: column.name,
+              type: column.sql_type,
+              value: value,
+              previous_value: value
+            }
+            acc
+          end
+          
+          owner.changebase_transaction.event_for(through_model.table_name, nil, {
+            schema: columns[0].try(:[], :schema) || through_model.connection.current_schema,
+            table: through_model.table_name,
+            type: :delete,
+            columns: columns,
+            timestamp: owner.changebase_timestamp
+          })
+        end
+        x
+      end
+    end
+    
     module ActiveRecord
       extend ActiveSupport::Concern
 
@@ -131,6 +167,7 @@ module Changebase
           other.after_create      { changebase_track(:insert) }
           other.after_update      { changebase_track(:update) }
           other.before_destroy    { changebase_track(:delete) }
+          ::ActiveRecord::Associations::HasManyThroughAssociation.prepend(Inline::Through)
         end
 
         # def inherited(subclass)
@@ -147,42 +184,6 @@ module Changebase
         #     @changebase = options
         #   end
         # end
-
-        def has_and_belongs_to_many(name, scope = nil, **options, &extension)
-          super
-          name = name.to_s
-          habtm_model = self.const_get("HABTM_#{name.to_s.camelize}")
-
-          foreign_key = options[:foreign_key] || "#{base_class.name.underscore}_id"
-          association_foreign_key = options[:association_foreign_key]
-          association_foreign_key ||= "#{options[:class_name].underscore}_id" if options[:class_name]
-          association_foreign_key ||= "#{name.singularize.underscore}_id"
-          inverse_of = (options[:inverse_of] || self.name.underscore.pluralize).to_s
-
-          callback = ->(method, owner, record) {
-
-            columns = habtm_model.columns.each_with_index.reduce([]) do |acc, (column, index)|
-              byebug
-
-              attr_type = self.type_for_attribute(column.name)
-              value = self.attributes[column.name]
-              previous_value = self.previous_changes[column.name].try(:[], 0)
-              previous_value ||= value if identity
-              acc << {
-                index: index,
-                identity: identity,
-                name: column.name,
-                type: column.sql_type,
-                value: attr_type.serialize(value),
-                previous_value: attr_type.serialize(previous_value)
-              }
-              acc
-            end
-
-            habtm_model.changebase_track(:delete)
-          }
-          self.send("after_remove_for_#{name}=", Array(self.send("after_remove_for_#{name}")).compact + [callback])
-        end
 
         # TODO: Shouldn't this just update the join table and not the fake column `#{relation_name}_ids`?
         def changebase_association_changed(id, reflection_or_relation_name, added: [], removed: [], timestamp: nil, type: :update, propagate: true)

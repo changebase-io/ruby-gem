@@ -227,7 +227,9 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
 
     new_topic = travel_to(timestamp) do
       new_topic = Topic.new(name: "Known Knowns")
-      post.update(topics: [new_topic])
+      debug do
+        post.update(topics: [new_topic])
+      end
       new_topic
     end
 
@@ -255,8 +257,8 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 identity: true,
                 name: "topic_id",
                 type: "bigint",
-                value: new_topic.id,
-                previous_value: new_topic.id
+                value: topic.id,
+                previous_value: topic.id
               }
             ]
           },
@@ -276,7 +278,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
                 previous_value: new_topic.id
               }, {
                 index: 1,
-                identity: true,
+                identity: false,
                 name: "name",
                 type: "character varying(255)",
                 value: "Known Knowns",
