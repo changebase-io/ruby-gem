@@ -45,18 +45,18 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
             timestamp: timestamp.utc.iso8601(3),
             columns: [
               { index: 0,
+                identity: true,
                 type: "bigint",
                 name: "id",
                 value: post.id,
-                previous_value: post.id,
-                identity: true
+                previous_value: post.id
               }, {
                 index: 1,
-                type: "character varying(255)",
+                identity: false,
                 name: "title",
+                type: "character varying(255)",
                 value: "Black Holes",
-                previous_value: nil,
-                identity: false
+                previous_value: nil
               }
             ]
           }, {
@@ -219,44 +219,102 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  # test '::update with adding new has_and_belongs_to_many association' do
-  #   @region = create(:region)
-  #   WebMock::RequestRegistry.instance.reset!
-  #
-  #   travel_to(@time) { @region.update(properties: [build(:property)]) }
-  #   @property = @region.properties.first
-  #
-  #   assert_posted("/events") do
-  #     assert_action_for @property, {
-  #       timestamp: @time.iso8601(3),
-  #       type: 'create',
-  #       subject_type: "Property",
-  #       subject_id: @property.id,
-  #       diff: {
-  #         id: [nil, @property.id],
-  #         name: [nil, @property.name],
-  #         description: [nil, @property.description],
-  #         constructed: [nil, @property.constructed],
-  #         size: [nil, @property.size],
-  #         created_at: [nil, @property.created_at],
-  #         aliases: [nil, []],
-  #         active: [nil, @property.active],
-  #         region_ids: [[], [@region.id]]
-  #       }
-  #     }
-  #
-  #     assert_action_for @region, {
-  #       diff: {
-  #         property_ids: [[], [@property.id]]
-  #       },
-  #       subject_type: "Region",
-  #       subject_id: @region.id,
-  #       timestamp: @time.iso8601(3),
-  #       type: 'update'
-  #     }
-  #   end
-  # end
-  #
+  test '::update with replacing has_and_belongs_to_many association with new' do
+    timestamp = Time.current + 1.day
+    topic = Topic.create(name: "Known Unkowns")
+    post = Post.create(title: "Black Holes", topics: [topic])
+    reset!
+
+    new_topic = travel_to(timestamp) do
+      new_topic = Topic.new(name: "Known Knowns")
+      post.update(topics: [new_topic])
+      new_topic
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "delete",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: new_topic.id,
+                previous_value: new_topic.id
+              }
+            ]
+          },
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "id",
+                type: "bigint",
+                value: new_topic.id,
+                previous_value: new_topic.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "name",
+                type: "character varying(255)",
+                value: "Known Knowns",
+                previous_value: nil
+              }
+            ]
+          },
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: new_topic.id,
+                previous_value: new_topic.id
+              }
+            ]
+          }
+        ]
+      }
+    })
+
+
+  end
+
   # test '::update with removing has_and_belongs_to_many association' do
   #   @property = create(:property)
   #   @region = create(:region, properties: [@property])
