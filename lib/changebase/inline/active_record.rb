@@ -132,7 +132,7 @@ module Changebase
             table: through_model.table_name,
             type: :delete,
             columns: columns,
-            timestamp: owner.changebase_timestamp
+            timestamp: Time.current
           })
         end
         x
@@ -207,10 +207,6 @@ module Changebase
         # end
       end
 
-      def changebase_timestamp
-        @changebase_timestamp ||= Time.current
-      end
-
       def changebase_tracking
         if Changebase.configured?# && self.class.instance_variable_defined?(:@changebase)
           # self.class.instance_variable_get(:@changebase)
@@ -263,7 +259,7 @@ module Changebase
           table: self.class.table_name,
           type: type,
           columns: columns,
-          timestamp: changebase_timestamp
+          timestamp: Time.current
         })
       end
 
@@ -290,7 +286,7 @@ module Changebase
 
                 event = owner.changebase_transaction.event_for(self.reflection.active_record, owner.id, {
                   type: :update,
-                  timestamp: owner.changebase_timestamp
+                  timestamp: Time.current
                 })
 
                 diff_key = "#{self.reflection.name.to_s.singularize}_ids"
@@ -303,7 +299,7 @@ module Changebase
                   removed_ids.each do |removed_id|
                     event = owner.changebase_transaction.event_for(ainverse_of.active_record, removed_id, {
                       type: :update,
-                      timestamp: owner.changebase_timestamp
+                      timestamp: Time.current
                     })
                     event.diff ||= {}
                     if ainverse_of.collection?
