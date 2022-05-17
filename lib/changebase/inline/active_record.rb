@@ -129,13 +129,21 @@ module Changebase
               acc
             end
 
-            owner.changebase_transaction.event!({
+            transaction = owner.changebase_transaction || Changebase::Transaction.new(
+              timestamp: Time.current,
+              metadata: through_model.connection.instance_variable_get(:@changebase_metadata)
+            )
+
+            transaction.event!({
               schema: columns[0].try(:[], :schema) || through_model.connection.current_schema,
               table: through_model.table_name,
               type: :delete,
               columns: columns,
               timestamp: Time.current
             })
+
+            # Save the Changebase::Transaction if we are not in a transaction.
+            transaction.save! if !owner.changebase_transaction
           end
         end
 
@@ -177,6 +185,7 @@ module Changebase
         # Commits a transaction.
         def commit_db_transaction
           Thread.current[:changebase_transaction]&.save!
+          Thread.current[:changebase_transaction] = nil
           super
         end
 

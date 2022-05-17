@@ -713,48 +713,52 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  # test 'has_and_belongs_to_many.clear' do
-  #   timestamp = Time.current + 1.day
-  #   topic = Topic.create(name: "Known Unknowns")
-  #   post = Post.create(title: "Black Holes", topics: [ topic ])
+  test 'has_and_belongs_to_many.clear' do
+    timestamp = Time.current + 1.day
+    topic = Topic.create(name: "Known Unknowns")
+    post = Post.create(title: "Black Holes", topics: [ topic ])
+    reset!
 
-  #   travel_to(timestamp) do
-  #     post.topics.clear
-  #   end
+    travel_to(timestamp) do
+      ActiveRecord::Base.with_metadata({name: "tom"}) do
+        post.topics.clear
+      end
+    end
 
-  #   assert_posted("/transactions", {
-  #     transaction: {
-  #       lsn: timestamp.utc.iso8601(3),
-  #       timestamp: timestamp.utc.iso8601(3),
-  #       events: [
-  #         {
-  #           lsn: timestamp.utc.iso8601(3),
-  #           type: "delete",
-  #           schema: "public",
-  #           table: "posts_topics",
-  #           timestamp: timestamp.utc.iso8601(3),
-  #           columns: [
-  #             {
-  #               index: 0,
-  #               identity: true,
-  #               name: "post_id",
-  #               type: "bigint",
-  #               value: nil,
-  #               previous_value: post.id
-  #             }, {
-  #               index: 1,
-  #               identity: true,
-  #               name: "topic_id",
-  #               type: "bigint",
-  #               value: nil,
-  #               previous_value: topic.id
-  #             }
-  #           ]
-  #         }
-  #       ]
-  #     }
-  #   })
-  # end
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        metadata: { name: "tom" },
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "delete",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: nil,
+                previous_value: post.id
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: nil,
+                previous_value: topic.id
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
 
   test 'has_and_belongs_to_many.create' do
     timestamp = Time.current + 1.day
