@@ -110,35 +110,39 @@ module Changebase
 
       def delete_records(records, method)
         x = super
-        records.each do |record|
-          through_model = source_reflection.active_record
 
-          columns = through_model.columns.each_with_index.reduce([]) do |acc, (column, index)|
-            attr_type = through_model.type_for_attribute(column.name)
-            previous_value = attr_type.serialize(column.name == source_reflection.foreign_key ? record.id : owner.id)
-            acc << {
-              index: index,
-              identity: true,
-              name: column.name,
-              type: column.sql_type,
-              value: nil,
-              previous_value: previous_value
-            }
-            acc
+        if method != :destroy
+          records.each do |record|
+            through_model = source_reflection.active_record
+
+            columns = through_model.columns.each_with_index.reduce([]) do |acc, (column, index)|
+              attr_type = through_model.type_for_attribute(column.name)
+              previous_value = attr_type.serialize(column.name == source_reflection.foreign_key ? record.id : owner.id)
+              acc << {
+                index: index,
+                identity: true,
+                name: column.name,
+                type: column.sql_type,
+                value: nil,
+                previous_value: previous_value
+              }
+              acc
+            end
+
+            owner.changebase_transaction.event!({
+              schema: columns[0].try(:[], :schema) || through_model.connection.current_schema,
+              table: through_model.table_name,
+              type: :delete,
+              columns: columns,
+              timestamp: Time.current
+            })
           end
-
-          owner.changebase_transaction.event!({
-            schema: columns[0].try(:[], :schema) || through_model.connection.current_schema,
-            table: through_model.table_name,
-            type: :delete,
-            columns: columns,
-            timestamp: Time.current
-          })
         end
+
         x
       end
     end
-    
+
     module HasMany
       def delete_or_nullify_all_records(method)
         super
@@ -152,7 +156,7 @@ module Changebase
     end
 
     module ActiveRecord
-      
+
       module PostgreSQLAdapter
         # Begins a transaction.
         def begin_db_transaction
@@ -175,7 +179,7 @@ module Changebase
           Thread.current[:changebase_transaction]&.save!
           super
         end
-        
+
         def changebase_transaction
           Thread.current[:changebase_transaction]
         end
