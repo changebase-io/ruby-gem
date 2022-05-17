@@ -151,6 +151,35 @@ module Changebase
     end
 
     module ActiveRecord
+      
+      module PostgreSQLAdapter
+        # Begins a transaction.
+        def begin_db_transaction
+          super
+          Thread.current[:changebase_transaction] = Changebase::Transaction.new(
+              timestamp: Time.current,
+              metadata: @changebase_metadata
+          )
+        end
+
+        # Aborts a transaction.
+        def exec_rollback_db_transaction
+          super
+        ensure
+          Thread.current[:changebase_transaction] = nil
+        end
+
+        # Commits a transaction.
+        def commit_db_transaction
+          Thread.current[:changebase_transaction]&.save!
+          super
+        end
+        
+        def changebase_transaction
+          Thread.current[:changebase_transaction]
+        end
+      end
+
       extend ActiveSupport::Concern
 
       class_methods do
@@ -180,56 +209,6 @@ module Changebase
 
       def changebase_timestamp
         @changebase_timestamp ||= Time.current
-      end
-
-      def with_transaction_returning_status
-        @changebase_timestamp = Time.current
-
-        if !Thread.current[:changebase_save_lock]
-          run_save = true
-          Thread.current[:changebase_save_lock] = true
-          if !Thread.current[:changebase_transaction]
-            destroy_current_transaction = true
-            # TODO: Move the metadata from the connection to a thread variable
-            metadata = self.class.connection.instance_variable_get(:@changebase_metadata)
-            Thread.current[:changebase_transaction] =
-              Changebase::Transaction.new(
-                timestamp: @changebase_timestamp,
-                metadata: metadata)
-          end
-        end
-
-        status = nil
-        self.class.transaction do
-          unless has_transactional_callbacks?
-            sync_with_transaction_state if @transaction_state&.finalized?
-            @transaction_state = self.class.connection.current_transaction.state
-          end
-          remember_transaction_record_state
-
-          status = yield
-          if status
-            if run_save && Changebase.configured? && !changebase_transaction.events.empty?
-              changebase_transaction&.save!
-            end
-          else
-            raise ::ActiveRecord::Rollback
-          end
-          status
-        ensure
-          @changebase_timestamp = nil
-          if run_save
-            Thread.current[:changebase_save_lock] = false
-          end
-          if destroy_current_transaction
-            Thread.current[:changebase_transaction] = nil
-          end
-
-          if has_transactional_callbacks? &&
-              (@_new_record_before_last_commit && !new_record? || _trigger_update_callback || _trigger_destroy_callback)
-            add_to_transaction
-          end
-        end
       end
 
       def changebase_tracking
@@ -291,7 +270,7 @@ module Changebase
       module Associations
         class CollectionAssociation
           def delete_all(dependent = nil)
-            changebase_encapsulate do
+            # changebase_encapsulate do
               if dependent && ![:nullify, :delete_all].include?(dependent)
                 raise ArgumentError, "Valid values are :nullify or :delete_all"
               end
@@ -337,7 +316,7 @@ module Changebase
                     end
                   end
                 end
-              end
+              # end
 
               delete_or_nullify_all_records(dependent).tap do
                 reset
@@ -349,7 +328,7 @@ module Changebase
           private
 
           def replace_records(new_target, original_target)
-            changebase_encapsulate do
+            # changebase_encapsulate do
               removed_records = target - new_target
               added_records = new_target - target
 
@@ -364,13 +343,13 @@ module Changebase
               if !owner.new_record?
                 owner.changebase_association_changed(self.reflection, added: added_records.map(&:id), removed: removed_records.map(&:id))
               end
-            end
+            # end
 
             target
           end
 
           def delete_or_destroy(records, method)
-            changebase_encapsulate do
+            # changebase_encapsulate do
               records = find(records) if records.any? { |record| record.kind_of?(Integer) || record.kind_of?(String) }
               records = records.flatten
               records.each { |record| raise_on_type_mismatch!(record) }
@@ -381,42 +360,9 @@ module Changebase
               else
                 transaction { remove_records(existing_records, records, method) }
               end
-            end
+            # end
           end
 
-          def changebase_encapsulate
-            @changebase_timestamp = Time.current
-
-            if !Thread.current[:changebase_save_lock]
-              run_save = true
-              Thread.current[:changebase_save_lock] = true
-              if Thread.current[:changebase_transaction].nil?
-                destroy_current_transaction = true
-                # TODO: Move the metadata from the connection to a thread variable
-                metadata = self.class.connection.instance_variable_get(:@changebase_metadata)
-                Thread.current[:changebase_transaction] =
-                  Changebase::Transaction.new(
-                    timestamp: @changebase_timestamp,
-                    metadata: metadata)
-              end
-            end
-
-            result = yield
-
-            if run_save && Changebase.configured?  && !owner.changebase_transaction.events.empty?
-              owner.changebase_transaction&.save!
-            end
-
-            result
-          ensure
-            @changebase_timestamp = nil
-            if run_save
-              Thread.current[:changebase_save_lock] = false
-            end
-            if destroy_current_transaction
-              Thread.current[:changebase_transaction] = nil
-            end
-          end
         end
       end
     end
