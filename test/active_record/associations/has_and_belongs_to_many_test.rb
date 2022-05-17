@@ -771,6 +771,28 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
             lsn: timestamp.utc.iso8601(3),
             type: "insert",
             schema: "public",
+            table: "topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              { index: 0,
+                identity: true,
+                type: "bigint",
+                name: "id",
+                value: topic.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: false,
+                name: "name",
+                type: "character varying(255)",
+                value: "Known Unknowns",
+                previous_value: nil
+              }
+            ]
+          }, {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
             table: "posts_topics",
             timestamp: timestamp.utc.iso8601(3),
             columns: [

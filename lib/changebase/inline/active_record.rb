@@ -141,12 +141,13 @@ module Changebase
     
     module HasMany
       def delete_or_nullify_all_records(method)
+        super
         if method == :delete_all
           target.each do |record|
             record.changebase_track(:delete)
           end
         end
-        super
+
       end
     end
 
@@ -187,8 +188,6 @@ module Changebase
           other.after_create      { changebase_track(:insert) }
           other.after_update      { changebase_track(:update) }
           other.after_destroy    { changebase_track(:delete) }
-          ::ActiveRecord::Associations::HasManyThroughAssociation.prepend(Inline::Through)
-          ::ActiveRecord::Associations::HasManyAssociation.prepend(Inline::HasMany)
         end
 
         # def inherited(subclass)

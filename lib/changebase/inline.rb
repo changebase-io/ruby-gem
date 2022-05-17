@@ -14,6 +14,8 @@ module Changebase::Inline
     require 'changebase/inline/active_record'
     ::ActiveRecord::Base.include(Changebase::Inline::ActiveRecord)
     ::ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.include(Changebase::Inline::ActiveRecord::PostgreSQLAdapter)
+    ::ActiveRecord::Associations::HasManyThroughAssociation.prepend(Changebase::Inline::Through)
+    ::ActiveRecord::Associations::HasManyAssociation.prepend(Changebase::Inline::HasMany)
     
     @loaded = true
   end
