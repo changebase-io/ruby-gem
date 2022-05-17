@@ -537,8 +537,91 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many.delete'
-  test 'has_and_belongs_to_many.destroy'
+  # test 'has_and_belongs_to_many.delete' do
+  #   timestamp = Time.current + 1.day
+  #   topic = Topic.create(name: "Known Unknowns")
+  #   post = Post.create(title: "Black Holes", topics: [ topic ])
+
+  #   travel_to(timestamp) do
+  #     post.topics.delete(topic)
+  #   end
+
+  #   assert_posted("/transactions", {
+  #     transaction: {
+  #       lsn: timestamp.utc.iso8601(3),
+  #       timestamp: timestamp.utc.iso8601(3),
+  #       events: [
+  #         {
+  #           lsn: timestamp.utc.iso8601(3),
+  #           type: "delete",
+  #           schema: "public",
+  #           table: "posts_topics",
+  #           timestamp: timestamp.utc.iso8601(3),
+  #           columns: [
+  #             {
+  #               index: 0,
+  #               identity: true,
+  #               name: "post_id",
+  #               type: "bigint",
+  #               value: nil,
+  #               previous_value: post.id
+  #             }, {
+  #               index: 1,
+  #               identity: true,
+  #               name: "topic_id",
+  #               type: "bigint",
+  #               value: nil,
+  #               previous_value: topic.id
+  #             }
+  #           ]
+  #         }
+  #       ]
+  #     }
+  #   })
+  # end
+
+  # test 'has_and_belongs_to_many.destroy' do
+  #   timestamp = Time.current + 1.day
+  #   topic = Topic.create(name: "Known Unknowns")
+  #   post = Post.create(title: "Black Holes", topics: [ topic ])
+
+  #   travel_to(timestamp) do
+  #     post.topics.destroy(topic)
+  #   end
+
+  #   assert_posted("/transactions", {
+  #     transaction: {
+  #       lsn: timestamp.utc.iso8601(3),
+  #       timestamp: timestamp.utc.iso8601(3),
+  #       events: [
+  #         {
+  #           lsn: timestamp.utc.iso8601(3),
+  #           type: "delete",
+  #           schema: "public",
+  #           table: "posts_topics",
+  #           timestamp: timestamp.utc.iso8601(3),
+  #           columns: [
+  #             {
+  #               index: 0,
+  #               identity: true,
+  #               name: "post_id",
+  #               type: "bigint",
+  #               value: nil,
+  #               previous_value: post.id
+  #             }, {
+  #               index: 1,
+  #               identity: true,
+  #               name: "topic_id",
+  #               type: "bigint",
+  #               value: nil,
+  #               previous_value: topic.id
+  #             }
+  #           ]
+  #         }
+  #       ]
+  #     }
+  #   })
+  # end
 
   test 'has_and_belongs_to_many=' do
     timestamp = Time.current + 1.day
@@ -628,6 +711,89 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many.clear'
-  test 'has_and_belongs_to_many.create'
+  # test 'has_and_belongs_to_many.clear' do
+  #   timestamp = Time.current + 1.day
+  #   topic = Topic.create(name: "Known Unknowns")
+  #   post = Post.create(title: "Black Holes", topics: [ topic ])
+
+  #   travel_to(timestamp) do
+  #     post.topics.clear
+  #   end
+
+  #   assert_posted("/transactions", {
+  #     transaction: {
+  #       lsn: timestamp.utc.iso8601(3),
+  #       timestamp: timestamp.utc.iso8601(3),
+  #       events: [
+  #         {
+  #           lsn: timestamp.utc.iso8601(3),
+  #           type: "delete",
+  #           schema: "public",
+  #           table: "posts_topics",
+  #           timestamp: timestamp.utc.iso8601(3),
+  #           columns: [
+  #             {
+  #               index: 0,
+  #               identity: true,
+  #               name: "post_id",
+  #               type: "bigint",
+  #               value: nil,
+  #               previous_value: post.id
+  #             }, {
+  #               index: 1,
+  #               identity: true,
+  #               name: "topic_id",
+  #               type: "bigint",
+  #               value: nil,
+  #               previous_value: topic.id
+  #             }
+  #           ]
+  #         }
+  #       ]
+  #     }
+  #   })
+  # end
+
+  test 'has_and_belongs_to_many.create' do
+    timestamp = Time.current + 1.day
+    post = Post.create(title: "Black Holes")
+
+    topic = travel_to(timestamp) do
+      post.topics.create(name: "Known Unknowns")
+    end
+
+    assert_posted("/transactions", {
+      transaction: {
+        lsn: timestamp.utc.iso8601(3),
+        timestamp: timestamp.utc.iso8601(3),
+        events: [
+          {
+            lsn: timestamp.utc.iso8601(3),
+            type: "insert",
+            schema: "public",
+            table: "posts_topics",
+            timestamp: timestamp.utc.iso8601(3),
+            columns: [
+              {
+                index: 0,
+                identity: true,
+                name: "post_id",
+                type: "bigint",
+                value: post.id,
+                previous_value: nil
+              }, {
+                index: 1,
+                identity: true,
+                name: "topic_id",
+                type: "bigint",
+                value: topic.id,
+                previous_value: nil
+              }
+            ]
+          }
+        ]
+      }
+    })
+  end
+
 end
