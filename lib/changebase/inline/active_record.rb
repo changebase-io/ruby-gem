@@ -2,103 +2,6 @@ require 'securerandom'
 
 module Changebase
 
-  class Transaction
-
-    attr_accessor :id, :metadata, :timestamp, :events
-
-    def initialize(attrs={})
-      attrs.each { |k,v| self.send("#{k}=", v) }
-
-      if id
-        @persisted = true
-      else
-        @persisted = false
-        @id ||= SecureRandom.uuid
-      end
-
-      @events ||= []
-      @timestamp ||= Time.now
-      @metadata ||= {}
-    end
-
-    def persisted?
-      @persisted
-    end
-
-    def event!(event)
-      event = Changebase::Event.new(event)
-      @events << event
-      event
-    end
-
-    def self.create!(attrs={})
-      transaction = self.new(attrs)
-      transaction.save!
-      transaction
-    end
-
-    def save!
-      persisted? ? _update : _create
-    end
-
-    def _update
-      return if events.empty?
-      events.delete_if { |a| a.diff.empty? }
-      payload = JSON.generate({events: events.as_json.map{ |json| json[:transaction_id] = id; json }})
-      Changebase.logger.debug("[Changebase] POST /events WITH #{payload}")
-      Changebase.connection.post('/events', payload)
-      @events = []
-    end
-
-    def _create
-      events.delete_if { |a| a.columns.empty? }
-      payload = JSON.generate({transaction: self.as_json})
-      Changebase.logger.debug("[Changebase] POST /transactions WITH #{payload}")
-      Changebase.connection.post('/transactions', payload)
-      @events = []
-      @persisted = true
-    end
-
-    def as_json
-      result = {
-        id:                   id,
-        lsn:                  timestamp.utc.iso8601(3),
-        timestamp:            timestamp.utc.iso8601(3),
-        events:               events.as_json
-      }
-      result[:metadata] = metadata.as_json if !metadata.empty?
-      result
-    end
-
-  end
-
-  class Event
-
-    attr_accessor :id, :database_id, :transaction_id, :type, :schema,
-      :table, :timestamp, :created_at, :columns
-
-    def initialize(attrs)
-      attrs.each do |k,v|
-        self.send("#{k}=", v)
-      end
-      self.columns ||= {}
-    end
-
-    def as_json
-      {
-        id: id,
-        transaction_id:     transaction_id,
-        lsn:                timestamp.utc.iso8601(3),
-        type: type,
-        schema: schema,
-        table: table,
-        timestamp:    timestamp.utc.iso8601(3),
-        columns:         columns.as_json,
-      }.select { |k, v| !v.nil? }
-    end
-
-  end
-
   module Inline
 
     def self.current_transaction
@@ -129,7 +32,7 @@ module Changebase
               acc
             end
 
-            transaction = owner.changebase_transaction || Changebase::Transaction.new(
+            transaction = owner.changebase_transaction || Changebase::Inline::Transaction.new(
               timestamp: Time.current,
               metadata: through_model.connection.instance_variable_get(:@changebase_metadata)
             )
@@ -169,7 +72,7 @@ module Changebase
         # Begins a transaction.
         def begin_db_transaction
           super
-          Thread.current[:changebase_transaction] = Changebase::Transaction.new(
+          Thread.current[:changebase_transaction] = Changebase::Inline::Transaction.new(
               timestamp: Time.current,
               metadata: @changebase_metadata
           )
@@ -203,20 +106,6 @@ module Changebase
           other.after_destroy    { changebase_track(:delete) }
         end
 
-        # def inherited(subclass)
-        #   super
-        #   subclass.instance_variable_set('@changebase', @changebase.clone) if defined?(@changebase)
-        # end
-        #
-        # def track(track_model = true, exclude: [], habtm_model: nil)
-        #   if track_model == false
-        #     @changebase = nil
-        #   else
-        #     options = { exclude: Array(exclude) }
-        #     options[:habtm_model] = habtm_model if habtm_model
-        #     @changebase = options
-        #   end
-        # end
       end
 
       def changebase_tracking
@@ -275,104 +164,6 @@ module Changebase
         })
       end
 
-      module Associations
-        class CollectionAssociation
-          def delete_all(dependent = nil)
-            # changebase_encapsulate do
-              if dependent && ![:nullify, :delete_all].include?(dependent)
-                raise ArgumentError, "Valid values are :nullify or :delete_all"
-              end
-
-              dependent = if dependent
-                            dependent
-                          elsif options[:dependent] == :delete
-                            :delete_all
-                          else
-                            options[:dependent]
-                          end
-
-              if dependent == :delete_all
-
-              elsif !owner.id.nil?
-                removed_ids = self.scope.pluck(:id)
-
-                event = owner.changebase_transaction.event_for(self.reflection.active_record, owner.id, {
-                  type: :update,
-                  timestamp: Time.current
-                })
-
-                diff_key = "#{self.reflection.name.to_s.singularize}_ids"
-                event.diff ||= {}
-                event.diff[diff_key] ||= [[], []]
-                event.diff[diff_key][0] |= removed_ids
-
-                ainverse_of = self.klass.reflect_on_association(self.options[:inverse_of])
-                if ainverse_of
-                  removed_ids.each do |removed_id|
-                    event = owner.changebase_transaction.event_for(ainverse_of.active_record, removed_id, {
-                      type: :update,
-                      timestamp: Time.current
-                    })
-                    event.diff ||= {}
-                    if ainverse_of.collection?
-                      diff_key = "#{ainverse_of.name.to_s.singularize}_ids"
-                      event.diff[diff_key] ||= [[], []]
-                      event.diff[diff_key][0] |= [owner.id]
-                    else
-                      diff_key = "#{ainverse_of.name}_id"
-                      event.diff[diff_key] ||= [owner.id, nil]
-                    end
-                  end
-                end
-              # end
-
-              delete_or_nullify_all_records(dependent).tap do
-                reset
-                loaded!
-              end
-            end
-          end
-
-          private
-
-          def replace_records(new_target, original_target)
-            # changebase_encapsulate do
-              removed_records = target - new_target
-              added_records = new_target - target
-
-              delete(difference(target, new_target))
-
-              unless concat(difference(new_target, target))
-                @target = original_target
-                raise RecordNotSaved, "Failed to replace #{reflection.name} because one or more of the " \
-                                      "new records could not be saved."
-              end
-
-              if !owner.new_record?
-                owner.changebase_association_changed(self.reflection, added: added_records.map(&:id), removed: removed_records.map(&:id))
-              end
-            # end
-
-            target
-          end
-
-          def delete_or_destroy(records, method)
-            # changebase_encapsulate do
-              records = find(records) if records.any? { |record| record.kind_of?(Integer) || record.kind_of?(String) }
-              records = records.flatten
-              records.each { |record| raise_on_type_mismatch!(record) }
-              existing_records = records.reject(&:new_record?)
-
-              if existing_records.empty?
-                remove_records(existing_records, records, method)
-              else
-                transaction { remove_records(existing_records, records, method) }
-              end
-            # end
-          end
-
-        end
-      end
     end
   end
 end

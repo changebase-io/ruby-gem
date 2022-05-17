@@ -3,6 +3,9 @@ Changebase.mode = 'inline'
 
 module Changebase::Inline
   
+  autoload :Event, 'changebase/inline/event'
+  autoload :Transaction, 'changebase/inline/transaction'
+  
   def self.load!
     require 'active_record'
     require 'changebase/active_record'
