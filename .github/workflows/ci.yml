@@ -19,7 +19,7 @@ jobs:
           - '5.2.7'
           - '6.0.0'
           - '6.1.0'
-          - '7.0.0'
+          - '7.0.1'
         exclude: # https://www.fastruby.io/blog/ruby/rails/versions/compatibility-table.html
           - rails: 5.2.7
             ruby: 3.0
@@ -29,7 +29,6 @@ jobs:
             ruby: 3.0
           - rails: 6.0.0
             ruby: 3.1
-
 
     steps:
       - name: Install Postgresql
