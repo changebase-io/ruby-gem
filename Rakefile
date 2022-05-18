@@ -22,20 +22,8 @@ MINORS =  %w(7.0.0 7.0.1 7.0.2) +
 #   end
 # end
 
-# Test Task
-namespace :test do
+namespace :setup do
   MINORS.each do |version|
-    namespace version do
-      ADAPTERS.each do |adapter|
-        Rake::TestTask.new(adapter => ["test:#{version}", "test:#{adapter}"]) do |t|
-          t.libs << 'lib' << 'test'
-          t.test_files = FileList[(File.file?(ARGV.last) || ARGV.index('*')) ? ARGV.last : 'test/**/*_test.rb']
-          t.warning = true
-          t.verbose = false
-        end
-      end
-    end
-
     task(version) do
       installed_version = `gem list -e rails`.lines.last.match(/\(([^\)]+)\)/)[1].split(", ")
       if !installed_version.include?(version)
@@ -47,6 +35,30 @@ namespace :test do
 
   ADAPTERS.each do |adapter|
     task(adapter) { ENV["CB_ADAPTER"] = adapter }
+  end
+end
+
+# Test Task
+namespace :test do
+  MINORS.each do |version|
+    namespace version do
+      ADAPTERS.each do |adapter|
+        Rake::TestTask.new(adapter => ["setup:#{version}", "setup:#{adapter}"]) do |t|
+          t.libs << 'lib' << 'test'
+          t.test_files = FileList[(File.file?(ARGV.last) || ARGV.index('*')) ? ARGV.last : 'test/**/*_test.rb']
+          t.warning = true
+          t.verbose = false
+        end
+      end
+    end
+
+    desc "Run test for Rails #{version}"
+    task version => ADAPTERS.shuffle.map { |a| "test:#{version}:#{a}" }
+  end
+
+  ADAPTERS.each do |adapter|
+    desc "Run test for #{adapter} Adatper"
+    task adapter => MINORS.shuffle.map { |v| "test:#{v}:#{adapter}" }
   end
 
   task majors: MAJORS.shuffle.map { |v| "test:#{v}" }
