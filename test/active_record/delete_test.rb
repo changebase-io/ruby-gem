@@ -77,7 +77,7 @@ class ActiveRecord::DeleteTest < ActiveSupport::TestCase
   test 'Base::with_metadata DATA' do
     timestamp = Time.current + 1.day
     travel_to timestamp do
-      ActiveRecord::Base.with_metadata({}) do
+      ActiveRecord::Base.with_metadata({ user: "tom" }) do
         @post.delete
       end
     end
@@ -93,6 +93,9 @@ class ActiveRecord::DeleteTest < ActiveSupport::TestCase
     when 'inline'
       assert_not_posted('/transactions', {
         transaction: {
+          metadata: {
+            user: "tom"
+          },
           events: [
             { type: "delete",
               schema: "public",

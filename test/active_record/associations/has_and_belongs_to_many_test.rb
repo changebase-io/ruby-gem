@@ -88,7 +88,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test '::create with new has_and_belongs_to_many association' do
+  test '::create with new has_and_belongs_to_many association', only: :inline do
     timestamp = Time.current + 1.day
     topic, post = travel_to(timestamp) do
       topic = Topic.new(name: "Known Unkowns")
@@ -175,7 +175,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test '::update with adding existing has_and_belongs_to_many association' do
+  test '::update with adding existing has_and_belongs_to_many association', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unkowns")
     post = Post.create(title: "Black Holes", topics: [])
@@ -219,7 +219,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test '::update with replacing has_and_belongs_to_many association with new' do
+  test '::update with replacing has_and_belongs_to_many association with new', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unkowns")
     post = Post.create(title: "Black Holes", topics: [topic])
@@ -313,7 +313,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test '::update with removing has_and_belongs_to_many association' do
+  test '::update with removing has_and_belongs_to_many association', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unkowns")
     post = Post.create(title: "Black Holes", topics: [topic])
@@ -357,7 +357,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test '::update with replacing has_and_belongs_to_many association' do
+  test '::update with replacing has_and_belongs_to_many association', only: :inline do
     timestamp = Time.current + 1.day
     topic1 = Topic.create(name: "Known Unknowns")
     topic2 = Topic.create(name: "Known Knowns")
@@ -426,7 +426,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test '::destroying updates has_and_belongs_to_many associations' do
+  test '::destroying updates has_and_belongs_to_many associations', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unknowns")
     post = Post.create(title: "Black Holes", topics: [topic])
@@ -494,7 +494,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many <<' do
+  test 'has_and_belongs_to_many <<', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unkowns")
     post = Post.create(title: "Black Holes", topics: [])
@@ -537,7 +537,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many.delete' do
+  test 'has_and_belongs_to_many.delete', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unknowns")
     post = Post.create(title: "Black Holes", topics: [ topic ])
@@ -580,7 +580,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many.destroy' do
+  test 'has_and_belongs_to_many.destroy', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unknowns")
     post = Post.create(title: "Black Holes", topics: [ topic ])
@@ -625,7 +625,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many=' do
+  test 'has_and_belongs_to_many=', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unknowns")
     post = Post.create(title: "Black Holes")
@@ -669,7 +669,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many_ids=' do
+  test 'has_and_belongs_to_many_ids=', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unknowns")
     post = Post.create(title: "Black Holes")
@@ -713,7 +713,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many.clear' do
+  test 'has_and_belongs_to_many.clear', only: :inline do
     timestamp = Time.current + 1.day
     topic = Topic.create(name: "Known Unknowns")
     post = Post.create(title: "Black Holes", topics: [ topic ])
@@ -760,7 +760,7 @@ class HasAndBelongsToManyTest < ActiveSupport::TestCase
     })
   end
 
-  test 'has_and_belongs_to_many.create' do
+  test 'has_and_belongs_to_many.create', only: :inline do
     timestamp = Time.current + 1.day
     post = Post.create(title: "Black Holes")
 

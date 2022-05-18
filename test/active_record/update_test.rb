@@ -297,7 +297,7 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
 
     case Changebase.mode
     when 'replication'
-      assert_query(<<~SQL, mode: :replication)
+      assert_query(<<~SQL)
         INSERT INTO "changebase_metadata" ( version, data )
         VALUES ( 1, '{"user":"tom"}' )
         ON CONFLICT ( version )
@@ -349,7 +349,7 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    assert_query(<<~SQL, mode: :replication)
+    assert_query(<<~SQL)
       INSERT INTO "changebase_metadata" ( version, data )
       VALUES ( 1, '{"user":"tom"}' )
       ON CONFLICT ( version )
@@ -365,7 +365,7 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    assert_query(<<~SQL, mode: :replication)
+    assert_query(<<~SQL)
       INSERT INTO "changebase_metadata" ( version, data )
       VALUES ( 1, '{"user":"tom"}' )
       ON CONFLICT ( version )
