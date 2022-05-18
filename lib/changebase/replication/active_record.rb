@@ -81,7 +81,7 @@ module Changebase::Replication
           /\A(?:[(\s]|#{CHANGEBASE_COMMENT_REGEX})*#{Regexp.union(*parts)}/
         end
               
-        CHANGEBASE_READ_QUERY = ActiveRecord::ConnectionAdapters::AbstractAdapter.changebase_build_read_query_regexp(
+        CHANGEBASE_READ_QUERY = changebase_build_read_query_regexp(
           :close, :declare, :fetch, :move, :set, :show
         )
         def write_query?(sql)
