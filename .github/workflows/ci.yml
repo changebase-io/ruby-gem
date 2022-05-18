@@ -20,6 +20,7 @@ jobs:
           - '~> 6.0.0'
           - '~> 6.1.0'
           - '~> 7.0.0'
+        mode: ['inline', 'replication']
 
     steps:
       - name: Install Postgresql
@@ -49,4 +50,5 @@ jobs:
 
       - name: Run tests
         run: |
-          bundle exec rake test
+          bundle exec rake test:${{ matrix.rails }}:${{ matrix.mode }}
+
