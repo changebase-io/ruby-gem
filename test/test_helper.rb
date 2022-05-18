@@ -89,7 +89,7 @@ class ActionDispatch::IntegrationTest
       end
     end
 
-    app.initialize!
+    @app.initialize!
   end
 
   def self.routes(&block)
@@ -297,18 +297,21 @@ class ActiveSupport::TestCase
     assert_equal(reduce_to(a, b), b)
   end
 
-  def assert_posted(path, body, **nargs)
-    assert_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", at_least_times: 1, **nargs) do |req|
+  def assert_posted(path, body, *nargs)
+    args = [ :post, "https://changebase.io/#{path.delete_prefix('/')}", at_least_times: 1 ] + nargs
+
+    assert_requested(*args) do |req|
       body = body.with_indifferent_access
       reduce_to(JSON(req.body), body) == body
     end
   end
 
-  def assert_not_posted(path, body = nil, **nargs)
+  def assert_not_posted(path, body = nil, *nargs)
+    args = [ :post, "https://changebase.io/#{path.delete_prefix('/')}" ] + nargs
     if body.nil?
-      assert_not_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs)
+      assert_not_requested(*args)
     else
-      assert_not_requested(:post, "https://changebase.io/#{path.delete_prefix('/')}", **nargs) do |req|
+      assert_not_requested(*args) do |req|
         body = body.with_indifferent_access
         reduce_to(JSON(req.body), body) == body
       end
