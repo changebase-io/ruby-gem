@@ -63,7 +63,7 @@ module Changebase::Replication
             ON CONFLICT ( version )
             DO UPDATE SET version = :version, data = :metadata;
           SQL
-  
+
           log(sql, "CHANGEBASE") do
             ActiveSupport::Dependencies.interlock.permit_concurrent_loads do
               @connection.async_exec(sql)
@@ -72,7 +72,25 @@ module Changebase::Replication
         end
         super
       end
+
+      if ::ActiveRecord.gem_version < ::Gem::Version.new("6.0.0")
+        CHANGEBASE_COMMENT_REGEX = %r{(?:--.*\n)|/\*(?:[^*]|\*[^/])*\*/}m
+        def self.changebase_build_read_query_regexp(*parts) # :nodoc:
+          parts += [:begin, :commit, :explain, :release, :rollback, :savepoint, :select, :with]
+          parts = parts.map { |part| /#{part}/i }
+          /\A(?:[(\s]|#{CHANGEBASE_COMMENT_REGEX})*#{Regexp.union(*parts)}/
+        end
+              
+        CHANGEBASE_READ_QUERY = ActiveRecord::ConnectionAdapters::AbstractAdapter.changebase_build_read_query_regexp(
+          :close, :declare, :fetch, :move, :set, :show
+        )
+        def write_query?(sql)
+          !CHANGEBASE_READ_QUERY.match?(sql)
+        rescue ArgumentError # Invalid encoding
+          !CHANGEBASE_READ_QUERY.match?(sql.b)
+        end
+      end
+
     end
-    
   end
 end
