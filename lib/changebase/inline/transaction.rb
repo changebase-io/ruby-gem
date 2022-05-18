@@ -23,8 +23,8 @@ class Changebase::Inline::Transaction
     @persisted
   end
 
-  def event!(event)
-    event = Changebase::Inline::Event.new(event)
+  def event!(event_attributes)
+    event = Changebase::Inline::Event.new(event_attributes)
     @events << event
     event
   end
