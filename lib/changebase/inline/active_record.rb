@@ -1,12 +1,7 @@
 require 'securerandom'
 
 module Changebase
-
   module Inline
-
-    def self.current_transaction
-      Thread.current[:changebase_transaction]
-    end
 
     module Through
       extend ActiveSupport::Concern
@@ -32,7 +27,7 @@ module Changebase
               acc
             end
 
-            transaction = owner.changebase_transaction || Changebase::Inline::Transaction.new(
+            transaction = through_model.connection.changebase_transaction || Changebase::Inline::Transaction.new(
               timestamp: Time.current,
               metadata: through_model.connection.instance_variable_get(:@changebase_metadata)
             )
@@ -46,7 +41,7 @@ module Changebase
             })
 
             # Save the Changebase::Transaction if we are not in a transaction.
-            transaction.save! if !owner.changebase_transaction
+            transaction.save! if !through_model.connection.changebase_transaction
           end
         end
 
@@ -55,26 +50,29 @@ module Changebase
     end
 
     module HasMany
+      
       def delete_or_nullify_all_records(method)
-        super
+        x = super
         if method == :delete_all
-          target.each do |record|
-            record.changebase_track(:delete)
-          end
+          target.each { |record| record.changebase_track(:delete) }
         end
-
+        x
       end
+      
     end
 
     module ActiveRecord
 
       module PostgreSQLAdapter
+        
+        attr_reader :changebase_transaction
+        
         # Begins a transaction.
         def begin_db_transaction
           super
-          Thread.current[:changebase_transaction] = Changebase::Inline::Transaction.new(
-              timestamp: Time.current,
-              metadata: @changebase_metadata
+          @changebase_transaction = Changebase::Inline::Transaction.new(
+            timestamp: Time.current,
+            metadata: @changebase_metadata
           )
         end
 
@@ -82,18 +80,14 @@ module Changebase
         def exec_rollback_db_transaction
           super
         ensure
-          Thread.current[:changebase_transaction] = nil
+          @changebase_transaction = nil
         end
 
         # Commits a transaction.
         def commit_db_transaction
-          Thread.current[:changebase_transaction]&.save!
-          Thread.current[:changebase_transaction] = nil
+          @changebase_transaction&.save!
+          @changebase_transaction = nil
           super
-        end
-
-        def changebase_transaction
-          Thread.current[:changebase_transaction]
         end
       end
 
@@ -103,7 +97,7 @@ module Changebase
         def self.extended(other)
           other.after_create      { changebase_track(:insert) }
           other.after_update      { changebase_track(:update) }
-          other.after_destroy    { changebase_track(:delete) }
+          other.after_destroy     { changebase_track(:delete) }
         end
 
       end
@@ -116,7 +110,7 @@ module Changebase
       end
 
       def changebase_transaction
-        Changebase::Inline.current_transaction
+        self.class.connection.changebase_transaction
       end
 
       def changebase_track(type)
