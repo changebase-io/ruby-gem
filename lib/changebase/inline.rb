@@ -2,10 +2,10 @@ require 'changebase'
 Changebase.mode = 'inline'
 
 module Changebase::Inline
-  
+
   autoload :Event, 'changebase/inline/event'
   autoload :Transaction, 'changebase/inline/transaction'
-  
+
   def self.load!
     require 'active_record'
     require 'changebase/active_record'
@@ -19,14 +19,14 @@ module Changebase::Inline
     ::ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.include(Changebase::Inline::ActiveRecord::PostgreSQLAdapter)
     ::ActiveRecord::Associations::HasManyThroughAssociation.prepend(Changebase::Inline::Through)
     ::ActiveRecord::Associations::HasManyAssociation.prepend(Changebase::Inline::HasMany)
-    
+
     @loaded = true
   end
-  
+
   def self.loaded?
     @loaded
   end
-  
+
 end
 
 Changebase::Inline.load!
