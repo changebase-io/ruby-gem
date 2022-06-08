@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  sunstone:
+  changebase:
     name: Changebase Ruby Gem Test
     runs-on: ubuntu-20.04
 
@@ -16,10 +16,20 @@ jobs:
       matrix:
         ruby: ['2.7', '3.0', '3.1']
         rails:
-          - '~> 6.0.0'
-          - '~> 6.1.0'
-          - '~> 7.0.0'
-        
+          - '5.2.7'
+          - '6.0.0'
+          - '6.1.0'
+          - '7.0.1'
+        exclude: # https://www.fastruby.io/blog/ruby/rails/versions/compatibility-table.html
+          - rails: 5.2.7
+            ruby: 3.0
+          - rails: 5.2.7
+            ruby: 3.1
+          - rails: 6.0.0
+            ruby: 3.0
+          - rails: 6.0.0
+            ruby: 3.1
+
     steps:
       - name: Install Postgresql
         run: |
@@ -35,7 +45,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-          
+
       - uses: actions/checkout@v2
 
       - name: Setup Gemfile
@@ -45,7 +55,8 @@ jobs:
           echo 'gem "rails", "${{ matrix.rails }}"' >> Gemfile
           echo 'gemspec' >> Gemfile
           bundle install
-          
+
       - name: Run tests
         run: |
-          bundle exec rake test
+          bundle exec rake test:${{ matrix.rails }}
+
