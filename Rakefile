@@ -1,6 +1,3 @@
-# require 'bundler/setup'
-# require "bundler/gem_tasks"
-# # Bundler.require(:development)
 require 'rake/testtask'
 require 'rdoc/task'
 

@@ -5,7 +5,7 @@ $LOAD_PATH << File.expand_path('../lib', __FILE__)
 # require 'simplecov'
 # SimpleCov.start
 
-# gem "rails", ENV["RAILS_VERSION"]
+gem "rails", ENV["RAILS_VERSION"]
 %w(railties actionpack activerecord).each do |g|
   gem g, ENV["RAILS_VERSION"]
 end
@@ -356,7 +356,7 @@ class ActiveSupport::TestCase
       self.class.log_all << sql
       unless ignore =~ sql
         if $debugging
-        puts caller#.select { |l| l.start_with?(File.expand_path('../../lib', __FILE__)) }
+        puts caller.select { |l| l.start_with?(File.expand_path('../../lib', __FILE__)) }
         puts "\n\n"
         end
       end
