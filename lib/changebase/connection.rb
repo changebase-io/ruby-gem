@@ -1,3 +1,5 @@
+require 'net/https'
+
 module Changebase
   
   class ServerError < ::RuntimeError
