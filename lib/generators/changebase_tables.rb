@@ -21,7 +21,12 @@ module Changebase
       end
       
       def table_name
-        options[:table_name] || Rails.application&.config&.changebase&.metadata_table || 'changebase_metadata'
+        return options[:table_name] if options[:table_name]
+        
+        
+        return Rails.application.config.changebase.metadata_table if Rails.application&.respond_to?(:changebase)
+        
+        "changebase_metadata"
       end
       
       def migration_version

@@ -3,12 +3,10 @@ require 'rdoc/task'
 
 ADAPTERS = %w(replication_by_message replication_by_table inline_by_api)
 
-MAJORS =  %w(7.0.4.3 6.1.7 6.0.6)
+MAJORS =  %w(7.0.4 6.1.7)
 
-MINORS =  %w(7.0.0 7.0.1 7.0.2 7.0.3 7.0.4.3) +
-          %w(6.1.0 6.1.1 6.1.2 6.1.3 6.1.4 6.1.5 6.1.6 6.1.7) +
-          %w(6.0.0 6.0.1 6.0.2 6.0.3 6.0.4 6.0.5 6.0.6)
-
+MINORS =  %w(7.0.1 7.0.2 7.0.3 7.0.4) +
+          %w(6.1.0 6.1.1 6.1.2 6.1.3 6.1.4 6.1.5 6.1.6 6.1.7)
 # task :coverage do
 #   require 'simplecov'
 #   SimpleCov.start do
@@ -21,11 +19,6 @@ MINORS =  %w(7.0.0 7.0.1 7.0.2 7.0.3 7.0.4.3) +
 namespace :setup do
   MINORS.each do |version|
     task(version) do
-      installed_version = `gem list -e rails`.strip.lines.last
-      installed_version = installed_version.match(/\(([^\)]+)\)/)[1].split(", ") if !installed_version.empty?
-      if !installed_version.include?(version)
-        `gem install rails -v #{version}`
-      end
       ENV['RAILS_VERSION'] = version
     end
   end
