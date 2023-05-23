@@ -6,8 +6,6 @@ class Changebase::Engine < ::Rails::Engine
   config.changebase.metadata_table  = "changebase_metadata"
 
   initializer :changebase do |app|
-    migration_paths = config.paths['db/migrate'].expanded
-
     ActiveSupport.on_load(:active_record) do
       Changebase.logger = ActiveRecord::Base.logger
 

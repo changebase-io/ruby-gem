@@ -1,23 +1,31 @@
+require 'rails/generators/active_record'
+
 module Changebase
   module Generators
-    class ChangebaseTablesGenerator < Rails::Generators::NamedBase
-
+    class ChangebaseTablesGenerator < ::ActiveRecord::Generators::Base
+      desc "Generate a migration for the Changebase metadata table"
+      
+      argument :table_name, type: :string, default: "changebase_metadata", banner: "changebase_metadata"
+      
+      source_root File.expand_path("../templates", __FILE__)
+      
       def create_data_migration_file
-        timestamp = Time.zone.now.to_s.tr('^0-9', '')[0..13]
-        filepath = "db/migrate/#{timestamp}_#{file_name}.rb"
+        timestamp = Time.now.to_s.tr('^0-9', '')[0..13]
+        filepath = "db/migrate/#{timestamp}_create_changebase_tables.rb"
+        puts filepath.inspect
 
-        create_file filepath, <<-FILE
-        class #{class_name} < #{ActiveRecord::Migration.current_version}
-
-          def change
-            create_table :#{Rails.application.config.changebase.metadata_table}, id: false do |t|
-              t.primary_key :version, :integer
-              t.jsonb       :data
-            end
-          end
-
-        end
-        FILE
+        migration_template "migration.rb", "#{db_migrate_path}/create_changebase_tables.rb", {
+          migration_version: migration_version,
+          table_name: 
+        }
+      end
+      
+      def table_name
+        options[:table_name] || Rails.application&.config&.changebase&.metadata_table || 'changebase_metadata'
+      end
+      
+      def migration_version
+        "#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}"
       end
 
     end

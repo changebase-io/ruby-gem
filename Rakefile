@@ -23,7 +23,6 @@ namespace :setup do
     task(version) do
       installed_version = `gem list -e rails`.strip.lines.last
       installed_version = installed_version.match(/\(([^\)]+)\)/)[1].split(", ") if !installed_version.empty?
-      puts installed_version.inspect
       if !installed_version.include?(version)
         `gem install rails -v #{version}`
       end

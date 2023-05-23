@@ -1,12 +1,13 @@
 module Changebase
 
-  autoload :VERSION, 'changebase/version'
-  autoload :Connection, 'changebase/connection'
-  autoload :Inline, 'changebase/inline'
-  autoload :Replication, 'changebase/replication'
-  autoload :ActiveRecord, 'changebase/active_record'
+  autoload :VERSION,          'changebase/version'
+  autoload :Connection,       'changebase/connection'
+  autoload :Inline,           'changebase/inline'
+  autoload :Replication,      'changebase/replication'
+  autoload :ActiveRecord,     'changebase/active_record'
   autoload :ActionController, 'changebase/action_controller'
-
+  autoload :Generators,       'generators/changebase_tables'
+  
   @config = {
     mode: "replication",
     metadata: {
