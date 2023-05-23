@@ -19,7 +19,7 @@ jobs:
           - '5.2.7'
           - '6.0.0'
           - '6.1.0'
-          - '7.0.1'
+          - '7.0.2'
         exclude: # https://www.fastruby.io/blog/ruby/rails/versions/compatibility-table.html
           - rails: 5.2.7
             ruby: 3.0
@@ -48,15 +48,6 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      - name: Setup Gemfile
-        run: |
-          rm Gemfile
-          echo 'source "https://rubygems.org"' > Gemfile
-          echo 'gem "rails", "${{ matrix.rails }}"' >> Gemfile
-          echo 'gemspec' >> Gemfile
-          bundle install
-
       - name: Run tests
         run: |
           bundle exec rake test:${{ matrix.rails }}
-
