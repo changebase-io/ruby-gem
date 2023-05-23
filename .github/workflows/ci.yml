@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Ruby Dependencies
         run: |
-          gem install rake
+          gem install rake timeout
 
       - uses: actions/checkout@v3
 
