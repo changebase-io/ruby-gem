@@ -69,9 +69,11 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -113,9 +115,11 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -157,7 +161,18 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -188,14 +203,8 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
               ]
             }
           ]
-        }})
-    when 'replication'
-      assert_query(<<~SQL)
-        INSERT INTO "changebase_metadata" ( version, data )
-        VALUES ( 1, '{"user":"tom"}' )
-        ON CONFLICT ( version )
-        DO UPDATE SET version = 1, data = '{"user":"tom"}';
-      SQL
+        }
+      })
     end
   end
 
@@ -207,9 +216,11 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -251,9 +262,11 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -295,14 +308,18 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
-      assert_query(<<~SQL)
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
+      assert_query(<<~MSG)
         INSERT INTO "changebase_metadata" ( version, data )
         VALUES ( 1, '{"user":"tom"}' )
         ON CONFLICT ( version )
         DO UPDATE SET version = 1, data = '{"user":"tom"}';
-      SQL
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -349,12 +366,19 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    assert_query(<<~SQL)
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    SQL
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
+    end
   end
 
   test 'Model::with_metadata with a write via exec_query', only: :replication  do
@@ -365,12 +389,19 @@ class ActiveRecord::UpdateTest < ActiveSupport::TestCase
       end
     end
 
-    assert_query(<<~SQL)
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    SQL
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
+    end
   end
 
 end

@@ -19,12 +19,19 @@ class ActiveRecordTest < ActiveSupport::TestCase
   test 'a custom metadata table', only: :replication do
     Changebase.metadata_table = 'x'
 
-    expected_query = <<~MSG
-      INSERT INTO "x" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    MSG
+    expected_query = case "#{Changebase.mode}/#{Changebase.metadata_mode}"
+    when 'replication/table'
+      <<~MSG
+        INSERT INTO "x" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      <<~MSG
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
+    end
 
     assert_query(expected_query) do
       ActiveRecord::Base.with_metadata({user: 'tom'}) do

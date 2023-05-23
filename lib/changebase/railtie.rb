@@ -2,7 +2,8 @@ class Changebase::Engine < ::Rails::Engine
 
   config.changebase = ActiveSupport::OrderedOptions.new
   # config.changebase.mode = nil
-  config.changebase.metadata_table = "changebase_metadata"
+  config.changebase.metadata_mode   = "message"
+  config.changebase.metadata_table  = "changebase_metadata"
 
   initializer :changebase do |app|
     migration_paths = config.paths['db/migrate'].expanded
@@ -13,9 +14,6 @@ class Changebase::Engine < ::Rails::Engine
       case Changebase.mode
       when 'replication'
         Changebase::Replication.load! if !Changebase::Replication.loaded?
-        migration_paths.each do |path|
-          ActiveRecord::Tasks::DatabaseTasks.migrations_paths << path
-        end
       when 'inline'
         Changebase::Inline.load! if !Changebase::Inline.loaded?
       end

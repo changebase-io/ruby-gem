@@ -25,7 +25,7 @@ require "action_controller/base"
 
 require 'changebase'
 require 'changebase/action_controller'
-require "changebase/#{ENV["CB_ADAPTER"]}"
+require "changebase/#{ENV["CB_ADAPTER"].split('_by_').first}"
 
 Rails.env = 'test'
 
@@ -37,11 +37,15 @@ WebMock::StubRegistry.instance.global_stubs[:after_local_stubs].push(
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
-case ENV["CB_ADAPTER"]
-when 'inline'
+case ENV["CB_ADAPTER"].split('_by_')
+when %w(inline api)
   Changebase.configure(
     connection: 'https://APIKEY@changebase.io',
     logger: Logger.new("/dev/null")
+  )
+when %w(replication table)
+  Changebase.configure(
+    metadata: {mode: 'table'}
   )
 end
 
@@ -73,6 +77,7 @@ class ActionDispatch::IntegrationTest
       # config.logger = Logger.new($stdout)
       # Rails.logger = config.logger
     end
+    @app.define_method(:railtie_name) { "TestApp" }
 
     route_namespace = self.name
     route_routes = @routes
@@ -109,7 +114,7 @@ class ActiveSupport::TestCase
 
   # File 'lib/active_support/testing/declarative.rb'
   def self.test(name, only: nil, &block)
-    return if only && !Array(only).include?(ENV["CB_ADAPTER"].to_sym)
+    return if only && !Array(only).include?(ENV["CB_ADAPTER"].split('_by_').first.to_sym)
 
     test_name = "test_#{name.gsub(/\s+/, '_')}".to_sym
     defined = method_defined? test_name
