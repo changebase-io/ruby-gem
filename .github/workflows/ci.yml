@@ -50,4 +50,4 @@ jobs:
 
       - name: Run tests
         run: |
-          bundle exec rake test:${{ matrix.rails }}
+          rake test:${{ matrix.rails }}
