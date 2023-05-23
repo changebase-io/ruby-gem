@@ -5,9 +5,14 @@ $LOAD_PATH << File.expand_path('../lib', __FILE__)
 # require 'simplecov'
 # SimpleCov.start
 
-gem "rails", ENV["RAILS_VERSION"]
-%w(railties actionpack activerecord).each do |g|
-  gem g, ENV["RAILS_VERSION"]
+require 'bundler/inline'
+
+gemfile do
+  source 'https://rubygems.org'
+
+  gemspec
+
+  gem 'rails', ENV["RAILS_VERSION"]
 end
 
 require 'byebug'
