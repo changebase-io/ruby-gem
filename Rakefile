@@ -22,10 +22,6 @@ MINORS =  %w(7.0.0 7.0.1 7.0.2) +
 namespace :setup do
   MINORS.each do |version|
     task(version) do
-      installed_version = `gem list -e rails`.lines.last.match(/\(([^\)]+)\)/)[1].split(", ")
-      if !installed_version.include?(version)
-        `gem install rails -v #{version}`
-      end
       ENV['RAILS_VERSION'] = version
     end
   end
