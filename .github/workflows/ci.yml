@@ -43,6 +43,10 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
 
+      - name: Install Ruby Dependencies
+        run: |
+          gem install rake
+
       - uses: actions/checkout@v3
 
       - name: Run tests
