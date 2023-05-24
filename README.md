@@ -108,6 +108,9 @@ To configure the metadata table create an initializer at
 
 ```ruby
 Rails.application.config.tap do |config|
+  # Defaults:
+  # config.changebase.metadata_mode = "message"
+  # config.changebase.metadata_message_prefix = "changebase_metadata"
   config.changebase.metadata_mode = "table"
   config.changebase.metadata_table = "cool_custom_metadata_table"
 end
@@ -119,7 +122,7 @@ If you are not using Rails you can configure Changebase directly via:
 Changebase.metadata_mode = "table"
 Changebase.metadata_table = "cool_custom_metadata_table"
 
-# Or
+Or
 
 Changebase.configure(metadata_mode: "table", metadata_table: "cool_custom_metadata_table")
 ```
