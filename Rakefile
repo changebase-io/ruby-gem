@@ -1,15 +1,12 @@
 require 'rake/testtask'
 require 'rdoc/task'
 
-ADAPTERS = %w(replication inline)
+ADAPTERS = %w(replication_by_message replication_by_table inline_by_api)
 
-MAJORS =  %w(7.0.2 6.1.5 6.0.4 5.2.7)
+MAJORS =  %w(7.0.4 6.1.7)
 
-MINORS =  %w(7.0.0 7.0.1 7.0.2) +
-          %w(6.1.0 6.1.1 6.1.2 6.1.3 6.1.4 6.1.5) +
-          %w(6.0.0 6.0.1 6.0.2 6.0.3 6.0.4) +
-          %w(5.2.0 5.2.1 5.2.2 5.2.3 5.2.4 5.2.5 5.2.6 5.2.7)
-
+MINORS =  %w(7.0.1 7.0.2 7.0.3 7.0.4) +
+          %w(6.1.0 6.1.1 6.1.2 6.1.3 6.1.4 6.1.5 6.1.6 6.1.7)
 # task :coverage do
 #   require 'simplecov'
 #   SimpleCov.start do

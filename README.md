@@ -15,13 +15,6 @@ If you are installing via bundler:
 gem "changebase"
 ```
 
-## Rails
-
-Once you install the Gem run your migration to autmatically create the metadata
-table for your database by runing:
-
-`rails db:migrate`
-
 ### ActionController
 
 In a controller you can use the following to log metadata with all updates during
@@ -105,24 +98,30 @@ The default mode for the `changebase` gem is `replication`. In this mode
 Changebase is setup to replicate your database and record events via the
 replication stream.
 
-The default configuration `changebase` will write metadata to the
-`"changebase_metadata"` table. To configure the metadata table create an
-initializer at `config/initializers/changebase.rb` with the following:
+The default configuration in `replication` mode is to emit the metadata
+as messages, this requires no configuration. If this does not work you can
+configure `metadata_mode` to be `"table"`. In `table` mode `changebase`
+will write metadata to the `"changebase_metadata"` table.
+
+To configure the metadata table create an initializer at
+`config/initializers/changebase.rb`:
 
 ```ruby
 Rails.application.config.tap do |config|
-  config.changebase.metadata_table = "my_very_cool_custom_metadata_table"
+  config.changebase.metadata_mode = "table"
+  config.changebase.metadata_table = "cool_custom_metadata_table"
 end
 ```
 
 If you are not using Rails you can configure Changebase directly via:
 
 ```ruby
-Changebase.metadata_table = "my_very_cool_custom_metadata_table"
+Changebase.metadata_mode = "table"
+Changebase.metadata_table = "cool_custom_metadata_table"
 
 # Or
 
-Changebase.configure(metadata_table: "my_very_cool_custom_metadata_table")
+Changebase.configure(metadata_mode: "table", metadata_table: "cool_custom_metadata_table")
 ```
 
 #### Inline Mode

@@ -9,44 +9,45 @@ on:
 jobs:
   changebase:
     name: Changebase Ruby Gem Test
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-22.04
+    
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['2.7', '3.0', '3.1']
+        ruby:
+          - '3.0'
+          - '3.1'
+          - '3.2'
         rails:
-          - '5.2.7'
-          - '6.0.0'
-          - '6.1.0'
-          - '7.0.2'
-        exclude: # https://www.fastruby.io/blog/ruby/rails/versions/compatibility-table.html
-          - rails: 5.2.7
-            ruby: 3.0
-          - rails: 5.2.7
-            ruby: 3.1
-          - rails: 6.0.0
-            ruby: 3.0
-          - rails: 6.0.0
-            ruby: 3.1
+          - '6.1.7'
+          - '7.0.1'
 
     steps:
       - name: Install Postgresql
         run: |
+          sudo pg_dropcluster 13 main && echo 'okay'
+          sudo pg_dropcluster 14 main && echo 'okay'
+          sudo rm -rf /etc/postgresql-common
+          sudo apt-get -y --purge remove $(sudo apt list --installed | grep postgresql | awk '{print $1}')
           sudo apt-get install curl ca-certificates gnupg
-          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg >/dev/null
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
-          sudo apt-get install postgresql-14
-          sudo systemctl start postgresql@14-main.service
-          pg_isready
+          sudo apt-get -y install postgresql-15
+          sudo systemctl start postgresql@15-main.service
+          sudo systemctl status postgresql@15-main.service
+          sudo pg_lsclusters
           sudo -u postgres createuser runner --superuser
 
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
 
-      - uses: actions/checkout@v2
+      - name: Install Ruby Dependencies
+        run: |
+          gem install rake timeout
+
+      - uses: actions/checkout@v3
 
       - name: Run tests
         run: |

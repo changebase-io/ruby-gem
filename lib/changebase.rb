@@ -1,24 +1,21 @@
 module Changebase
 
-  autoload :VERSION, 'changebase/version'
-  autoload :Connection, 'changebase/connection'
-  autoload :Inline, 'changebase/inline'
-  autoload :Replication, 'changebase/replication'
-  autoload :ActiveRecord, 'changebase/active_record'
+  autoload :VERSION,          'changebase/version'
+  autoload :Connection,       'changebase/connection'
+  autoload :Inline,           'changebase/inline'
+  autoload :Replication,      'changebase/replication'
+  autoload :ActiveRecord,     'changebase/active_record'
   autoload :ActionController, 'changebase/action_controller'
-
+  autoload :Generators,       'generators/changebase_tables'
+  
   @config = {
     mode: "replication",
-    metadata_table: "changebase_metadata"
+    metadata: {
+      mode: "message",
+      message_prefix: "changebase_metadata",
+      table_name: "changebase_metadata"
+    }
   }
-
-  def self.metadata_table=(value)
-    @config[:metadata_table] = value
-  end
-
-  def self.metadata_table
-    @config[:metadata_table]
-  end
 
   def self.mode=(value)
     @config[:mode] = value
@@ -26,6 +23,30 @@ module Changebase
 
   def self.mode
     @config[:mode]
+  end
+
+  def self.metadata_mode=(value)
+    @config[:metadata][:mode] = value
+  end
+
+  def self.metadata_mode
+    @config[:metadata][:mode]
+  end
+
+  def self.metadata_message_prefix=(value)
+    @config[:metadata][:message_prefix] = value
+  end
+
+  def self.metadata_message_prefix
+    @config[:metadata][:message_prefix]
+  end
+
+  def self.metadata_table=(value)
+    @config[:metadata][:table_name] = value
+  end
+
+  def self.metadata_table
+    @config[:metadata][:table_name]
   end
 
   def self.connection=(value)
@@ -39,7 +60,7 @@ module Changebase
   end
 
   def self.configure(**config)
-    @config.merge!(config)
+    @config.deep_merge!(config)
     self.logger = @config[:logger] if @config[:logger]
   end
 

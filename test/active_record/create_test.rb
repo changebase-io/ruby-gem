@@ -24,9 +24,11 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
       end
     end
     
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
           transaction: {
@@ -69,9 +71,11 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
       end
     end
     
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
           transaction: {
@@ -114,13 +118,17 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
       end
     end
     
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_query(<<~MSG)
         INSERT INTO "changebase_metadata" ( version, data )
         VALUES ( 1, '{"user":"tom"}' )
         ON CONFLICT ( version )
         DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
       MSG
     when 'inline'
       assert_posted('/transactions', {
@@ -165,9 +173,11 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
       end
     end
     
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
           transaction: {
@@ -210,9 +220,11 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
       end
     end
     
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
           transaction: {
@@ -255,13 +267,17 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_query(<<~MSG)
         INSERT INTO "changebase_metadata" ( version, data )
         VALUES ( 1, '{"user":"tom"}' )
         ON CONFLICT ( version )
         DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
       MSG
     when 'inline'
       assert_posted('/transactions', {
@@ -301,13 +317,20 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
   # --------------------
 
   test 'Model::with_metadata with a write via execute', only: :replication do
-    expected_query = <<~MSG
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    MSG
-
+    expected_query = case "#{Changebase.mode}/#{Changebase.metadata_mode}"
+    when 'replication/table'
+      <<~MSG
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      <<~MSG
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
+    end
+    
     assert_query(expected_query) do
       Post.with_metadata({user: 'tom'}) do
         Post.connection.execute("INSERT INTO posts DEFAULT VALUES")
@@ -316,12 +339,19 @@ class ActiveRecord::CreateTest < ActiveSupport::TestCase
   end
 
   test 'Model::with_metadata with a write via exec_query', only: :replication do
-    expected_query = <<~MSG
-      INSERT INTO "changebase_metadata" ( version, data )
-      VALUES ( 1, '{"user":"tom"}' )
-      ON CONFLICT ( version )
-      DO UPDATE SET version = 1, data = '{"user":"tom"}';
-    MSG
+    expected_query = case "#{Changebase.mode}/#{Changebase.metadata_mode}"
+    when 'replication/table'
+      <<~MSG
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      <<~MSG
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
+    end
 
     assert_query(expected_query) do
       Post.with_metadata({user: 'tom'}) do

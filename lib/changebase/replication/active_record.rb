@@ -57,12 +57,19 @@ module Changebase::Replication
 
       def commit_db_transaction
         if !@without_changebase && @changebase_metadata && !@changebase_metadata.empty?
-          sql = ::ActiveRecord::Base.send(:replace_named_bind_variables, <<~SQL, {version: 1, metadata: ActiveSupport::JSON.encode(@changebase_metadata)})
-            INSERT INTO #{quote_table_name(Changebase.metadata_table)} ( version, data )
-            VALUES ( :version, :metadata )
-            ON CONFLICT ( version )
-            DO UPDATE SET version = :version, data = :metadata;
-          SQL
+          sql = case Changebase.metadata_mode
+          when 'message'
+            ::ActiveRecord::Base.send(:replace_named_bind_variables, <<~SQL, {prefix: Changebase.metadata_message_prefix, metadata: ActiveSupport::JSON.encode(@changebase_metadata)})
+              SELECT pg_logical_emit_message(true, :prefix, :metadata);
+            SQL
+          when 'table'
+            ::ActiveRecord::Base.send(:replace_named_bind_variables, <<~SQL, {version: 1, metadata: ActiveSupport::JSON.encode(@changebase_metadata)})
+              INSERT INTO #{quote_table_name(Changebase.metadata_table)} ( version, data )
+              VALUES ( :version, :metadata )
+              ON CONFLICT ( version )
+              DO UPDATE SET version = :version, data = :metadata;
+            SQL
+          end
 
           log(sql, "CHANGEBASE") do
             ActiveSupport::Dependencies.interlock.permit_concurrent_loads do
@@ -70,6 +77,7 @@ module Changebase::Replication
             end
           end
         end
+        
         super
       end
 

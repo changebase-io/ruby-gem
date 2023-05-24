@@ -21,7 +21,7 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
     @post = Post.create!(title: 'one')
   end
 
-  test "#destroy", only: :inline do
+  test "#destroy" do
     timestamp = Time.current + 1.day
     travel_to timestamp do
       ActiveRecord::Base.with_metadata(nil) do
@@ -29,36 +29,43 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    assert_posted('/transactions', {
-      transaction: {
-        lsn: timestamp.utc.iso8601(3),
-        timestamp: timestamp.utc.iso8601(3),
-        events: [
-          { lsn: timestamp.utc.iso8601(3),
-            type: "delete",
-            schema: "public",
-            table: "posts",
-            timestamp: timestamp.utc.iso8601(3),
-            columns: [
-              { index: 0,
-                identity: true,
-                type: "bigint",
-                name: "id",
-                value: nil,
-                previous_value: @post.id,
-              }, {
-                index: 1,
-                identity: false,
-                type: "character varying(255)",
-                name: "title",
-                value: nil,
-                previous_value: "one"
-              }
-            ]
-          }
-        ]
-      }
-    })
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
+      assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
+    when 'inline'
+      assert_posted('/transactions', {
+        transaction: {
+          lsn: timestamp.utc.iso8601(3),
+          timestamp: timestamp.utc.iso8601(3),
+          events: [
+            { lsn: timestamp.utc.iso8601(3),
+              type: "delete",
+              schema: "public",
+              table: "posts",
+              timestamp: timestamp.utc.iso8601(3),
+              columns: [
+                { index: 0,
+                  identity: true,
+                  type: "bigint",
+                  name: "id",
+                  value: nil,
+                  previous_value: @post.id,
+                }, {
+                  index: 1,
+                  identity: false,
+                  type: "character varying(255)",
+                  name: "title",
+                  value: nil,
+                  previous_value: "one"
+                }
+              ]
+            }
+          ]
+        }
+      })
+    end
   end
 
   test 'Base::with_metadata nil' do
@@ -69,9 +76,11 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
           transaction: {
@@ -114,9 +123,11 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -158,7 +169,18 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
+      assert_query(<<~MSG)
+        INSERT INTO "changebase_metadata" ( version, data )
+        VALUES ( 1, '{"user":"tom"}' )
+        ON CONFLICT ( version )
+        DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
+      MSG
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -190,13 +212,6 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
             }
           ]
         }})
-    when 'replication'
-      assert_query(<<~MSG)
-        INSERT INTO "changebase_metadata" ( version, data )
-        VALUES ( 1, '{"user":"tom"}' )
-        ON CONFLICT ( version )
-        DO UPDATE SET version = 1, data = '{"user":"tom"}';
-      MSG
     end
   end
 
@@ -208,9 +223,11 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -252,9 +269,11 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_not_query(/INSERT INTO "changebase_metadata"/i)
+    when 'replication/message'
+      assert_not_query(/pg_logical_emit_message/i)
     when 'inline'
       assert_posted('/transactions', {
         transaction: {
@@ -296,13 +315,17 @@ class ActiveRecord::DestroyTest < ActiveSupport::TestCase
       end
     end
 
-    case Changebase.mode
-    when 'replication'
+    case (Changebase.mode == 'inline' ? 'inline' : "#{Changebase.mode}/#{Changebase.metadata_mode}")
+    when 'replication/table'
       assert_query(<<~MSG)
         INSERT INTO "changebase_metadata" ( version, data )
         VALUES ( 1, '{"user":"tom"}' )
         ON CONFLICT ( version )
         DO UPDATE SET version = 1, data = '{"user":"tom"}';
+      MSG
+    when 'replication/message'
+      assert_query(<<~MSG)
+        SELECT pg_logical_emit_message(true, 'changebase_metadata', '{"user":"tom"}');
       MSG
     when 'inline'
       assert_posted('/transactions', {
