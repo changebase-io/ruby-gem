@@ -7,7 +7,13 @@ module Changebase
   autoload :ActiveRecord,     'changebase/active_record'
   autoload :ActionController, 'changebase/action_controller'
   autoload :Generators,       'generators/changebase_tables'
-  
+
+  autoload :Record,       'changebase/record'
+  autoload :Transaction,  'changebase/models/transaction'
+  autoload :Event,        'changebase/models/event'
+  autoload :Column,       'changebase/models/column'
+  autoload :Metadatum,    'changebase/models/metadatum'
+    
   @config = {
     mode: "replication",
     metadata: {
@@ -81,6 +87,12 @@ module Changebase
 
   def self.logger=(logger)
     @logger = logger
+  end
+
+  def self.digest_identity(*ids)
+    Digest::SHA256.digest(
+      ids.flatten.map { |v| "\x01".b + v.gsub("\x00".b, "\x00\xFF".b) + "\x00" }.join
+    )
   end
 
 end

@@ -1,4 +1,8 @@
 module Changebase::ActiveRecord
+
+  autoload :Helpers,    'changebase/active_record/helpers'
+  autoload :Connection, 'changebase/active_record/connection'
+  
   extend ActiveSupport::Concern
 
   class_methods do
@@ -9,15 +13,6 @@ module Changebase::ActiveRecord
 
   def with_metadata(metadata, &block)
     self.class.with_metadata(metadata, &block)
-  end
-
-  module Connection
-    def with_metadata(metadata, &block)
-      @changebase_metadata = metadata
-      yield
-    ensure
-      @changebase_metadata = nil
-    end
   end
   
 end
