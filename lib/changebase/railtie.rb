@@ -45,12 +45,6 @@ class Changebase::Engine < ::Rails::Engine
         require 'arel/extensions'
         Changebase::Record.establish_connection(configs)
       end
-      
-      ActiveSupport.on_load(:after_initialize) do
-        if defined?(::ApplicationRecord)
-          ::ApplicationRecord.include(Changebase::ActiveRecord::Helpers)
-        end
-      end
     end
 
     ActiveSupport.on_load(:action_controller) do
