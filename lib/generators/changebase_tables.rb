@@ -12,7 +12,6 @@ module Changebase
       def create_data_migration_file
         timestamp = Time.now.to_s.tr('^0-9', '')[0..13]
         filepath = "db/migrate/#{timestamp}_create_changebase_tables.rb"
-        puts filepath.inspect
 
         migration_template "migration.rb", "#{db_migrate_path}/create_changebase_tables.rb", {
           migration_version: migration_version,

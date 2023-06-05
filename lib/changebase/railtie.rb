@@ -27,7 +27,6 @@ class Changebase::Engine < ::Rails::Engine
         app.config_for(:changebase)[:api_key]
       end
       
-      puts api_key_or_url.inspect
       configs = if api_key_or_url =~ /\A\w+:/
         h = ActiveRecord::DatabaseConfigurations::ConnectionUrlResolver.new(api_key_or_url).to_hash.symbolize_keys
         h[:api_key] = h.delete(:username)
