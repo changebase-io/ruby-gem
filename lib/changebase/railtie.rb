@@ -23,7 +23,7 @@ class Changebase::Engine < ::Rails::Engine
         app.credentials.changebase
       elsif app.secrets.changebase && app.secrets.changebase.is_a?(String)
         app.secrets.changebase
-      elsif app.config_for(:changebase)
+      elsif File.exist?(Rails.root.join('config', 'changebase.yml'))
         app.config_for(:changebase)[:api_key]
       end
       
