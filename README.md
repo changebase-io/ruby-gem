@@ -168,9 +168,9 @@ end
 If you are not using Rails you can configure Changebase directly via:
 
 ```ruby
-Changebase.configure do |config|
-  config.changebase.mode = "inline"
-  config.changebase.connection = "https://#{ ENV.fetch('CHANGEBASE_API_KEY') }@changebase.io"
+Changebase.configure do |changebase|
+  changebase.mode = "inline"
+  changebase.connection = "https://#{ ENV.fetch('CHANGEBASE_API_KEY') }@changebase.io"
 end
 
 # Or

@@ -67,6 +67,7 @@ module Changebase
 
   def self.configure(**config)
     @config.deep_merge!(config)
+    yield(self) if block_given?
     self.logger = @config[:logger] if @config[:logger]
   end
 
