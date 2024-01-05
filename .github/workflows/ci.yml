@@ -48,7 +48,7 @@ jobs:
 
       - name: Install Ruby Dependencies
         run: |
-          gem install rake timeout
+          gem install rake timeout net-protocol
 
       - uses: actions/checkout@v3
 
