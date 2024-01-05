@@ -73,7 +73,11 @@ module Changebase::Replication
 
           log(sql, "CHANGEBASE") do
             ActiveSupport::Dependencies.interlock.permit_concurrent_loads do
-              @connection.async_exec(sql)
+              if Gem::Version.new(::ActiveRecord::VERSION::STRING) >= Gem::Version.new("7.1.0")
+                @raw_connection
+              else
+                @connection
+              end.async_exec(sql)
             end
           end
         end
