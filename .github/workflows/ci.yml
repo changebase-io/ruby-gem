@@ -48,7 +48,7 @@ jobs:
 
       - name: Install Ruby Dependencies
         run: |
-          gem install rake timeout net-protocol
+          gem install rake timeout net-protocol stringio
 
       - uses: actions/checkout@v3
 
