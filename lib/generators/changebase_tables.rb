@@ -13,10 +13,9 @@ module Changebase
         timestamp = Time.now.to_s.tr('^0-9', '')[0..13]
         filepath = "db/migrate/#{timestamp}_create_changebase_tables.rb"
 
-        migration_template "migration.rb", "#{db_migrate_path}/create_changebase_tables.rb", {
-          migration_version: migration_version,
-          table_name: 
-        }
+        migration_template("migration.rb", "#{ db_migrate_path }/create_changebase_tables.rb", {
+          migration_version: migration_version
+        })
       end
       
       def table_name

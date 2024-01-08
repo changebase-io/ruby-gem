@@ -3,9 +3,10 @@ require 'rdoc/task'
 
 ADAPTERS = %w(replication_by_message replication_by_table inline_by_api)
 
-MAJORS =  %w(7.0.4 6.1.7)
+MAJORS =  %w(7.1.2 7.0.4 6.1.7)
 
-MINORS =  %w(7.0.1 7.0.2 7.0.3 7.0.4) +
+MINORS =  %w(7.1.2) +
+          %w(7.0.1 7.0.2 7.0.3 7.0.4) +
           %w(6.1.0 6.1.1 6.1.2 6.1.3 6.1.4 6.1.5 6.1.6 6.1.7)
 # task :coverage do
 #   require 'simplecov'

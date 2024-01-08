@@ -73,7 +73,11 @@ module Changebase::Replication
 
           log(sql, "CHANGEBASE") do
             ActiveSupport::Dependencies.interlock.permit_concurrent_loads do
-              @connection.async_exec(sql)
+              if defined?(@connection) # <= Rails 7.0
+                @connection.async_exec(sql)
+              else # >= Rails 7.1
+                with_raw_connection { |conn| conn.async_exec(sql) }
+              end              
             end
           end
         end
