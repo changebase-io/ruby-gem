@@ -57,18 +57,28 @@ module Changebase::Replication
 
       def commit_db_transaction
         if !@without_changebase && @changebase_metadata && !@changebase_metadata.empty?
-          sql = case Changebase.metadata_mode
+          args = case Changebase.metadata_mode
           when 'message'
-            ::ActiveRecord::Base.send(:replace_named_bind_variables, <<~SQL, {prefix: Changebase.metadata_message_prefix, metadata: ActiveSupport::JSON.encode(@changebase_metadata)})
+            [ <<~SQL, {prefix: Changebase.metadata_message_prefix, metadata: ActiveSupport::JSON.encode(@changebase_metadata)} ]
               SELECT pg_logical_emit_message(true, :prefix, :metadata);
             SQL
           when 'table'
-            ::ActiveRecord::Base.send(:replace_named_bind_variables, <<~SQL, {version: 1, metadata: ActiveSupport::JSON.encode(@changebase_metadata)})
-              INSERT INTO #{quote_table_name(Changebase.metadata_table)} ( version, data )
-              VALUES ( :version, :metadata )
-              ON CONFLICT ( version )
-              DO UPDATE SET version = :version, data = :metadata;
+            [ <<~SQL, {version: 1, metadata: ActiveSupport::JSON.encode(@changebase_metadata)} ]
+                INSERT INTO #{quote_table_name(Changebase.metadata_table)} ( version, data )
+                VALUES ( :version, :metadata )
+                ON CONFLICT ( version )
+                DO UPDATE SET version = :version, data = :metadata;
             SQL
+          end
+
+
+          sql = if Rails.version >= "7.2"
+            # pp Rails.version
+            ::ActiveRecord::Base.with_connection do |c|
+              ::ActiveRecord::Base.send(:replace_named_bind_variables, c, *args)
+            end
+          else
+            ::ActiveRecord::Base.send(:replace_named_bind_variables, *args)
           end
 
           log(sql, "CHANGEBASE") do
@@ -77,11 +87,11 @@ module Changebase::Replication
                 @connection.async_exec(sql)
               else # >= Rails 7.1
                 with_raw_connection { |conn| conn.async_exec(sql) }
-              end              
+              end
             end
           end
         end
-        
+
         super
       end
 
@@ -92,7 +102,7 @@ module Changebase::Replication
           parts = parts.map { |part| /#{part}/i }
           /\A(?:[(\s]|#{CHANGEBASE_COMMENT_REGEX})*#{Regexp.union(*parts)}/
         end
-              
+
         CHANGEBASE_READ_QUERY = changebase_build_read_query_regexp(
           :close, :declare, :fetch, :move, :set, :show
         )

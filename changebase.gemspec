@@ -25,9 +25,9 @@ Gem::Specification.new do |spec|
   spec.rdoc_options.concat ['--main', 'README.md']
   
   # Runtime
-  spec.add_runtime_dependency 'activerecord',  '>= 5.2', '< 8'
-  spec.add_runtime_dependency 'actionpack',    '>= 5.2', '< 8'
-  spec.add_runtime_dependency 'railties',      '>= 5.2', '< 8'
+  spec.add_runtime_dependency 'activerecord',  '>= 5.2', '< 9'
+  spec.add_runtime_dependency 'actionpack',    '>= 5.2', '< 9'
+  spec.add_runtime_dependency 'railties',      '>= 5.2', '< 9'
 
   # Developoment 
   spec.add_development_dependency 'rake'
