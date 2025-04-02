@@ -21,7 +21,7 @@ class Changebase::Engine < ::Rails::Engine
         app.config.changebase.api_key
       elsif app.credentials.changebase && app.credentials.changebase.is_a?(String)
         app.credentials.changebase
-      elsif app.secrets.changebase && app.secrets.changebase.is_a?(String)
+      elsif app.respond_to?(:secrets) && app.secrets.changebase && app.secrets.changebase.is_a?(String) #TODO: remove when dropping support for rails < 8.0
         app.secrets.changebase
       elsif File.exist?(Rails.root.join('config', 'changebase.yml'))
         app.config_for(:changebase)[:api_key]
