@@ -14,6 +14,10 @@ module Changebase::Replication
       ensure
         @without_changebase = false
       end
+      
+      def add_index(table_name, column_name, **options) # :nodoc:
+        without_changebase { super }
+      end
 
       def drop_database(name) # :nodoc:
         without_changebase { super }
